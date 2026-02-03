@@ -77,30 +77,38 @@ export default function AdminPage() {
       )}
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-2">Refresh de views materializadas</h2>
+        <h2 className="font-medium text-slate-800 mb-2">Atualizar views materializadas</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Execute após carregar Folha, Bloqueados, Cancelados ou CADU.
+          Execute após carregar Folha, Bloqueados, Cancelados, CADU ou Visitas. Assim as views ficam alinhadas com os dados.
         </p>
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
+            onClick={() => runRefresh('todas')}
+            disabled={!!refreshLoading}
+            className="btn-primary disabled:opacity-50 font-medium"
+          >
+            {refreshLoading === 'todas' ? 'Executando…' : 'Atualizar todas as views'}
+          </button>
+          <button
+            type="button"
             onClick={() => runRefresh('familia_cpf_visitas')}
             disabled={!!refreshLoading}
-            className="btn-primary disabled:opacity-50"
+            className="btn-secondary disabled:opacity-50"
           >
-            {refreshLoading === 'familia_cpf_visitas' ? 'Executando…' : 'Refresh Família/CPF/Visitas'}
+            {refreshLoading === 'familia_cpf_visitas' ? 'Executando…' : 'Só Família/CPF/Visitas'}
           </button>
           <button
             type="button"
             onClick={() => runRefresh('folha_rf')}
             disabled={!!refreshLoading}
-            className="btn-primary disabled:opacity-50"
+            className="btn-secondary disabled:opacity-50"
           >
-            {refreshLoading === 'folha_rf' ? 'Executando…' : 'Refresh Folha RF'}
+            {refreshLoading === 'folha_rf' ? 'Executando…' : 'Só Folha RF'}
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          Família/CPF/Visitas: mv_familia_situacao, mv_cpf_familia_situacao. Folha RF: mv_folha_base, mv_folha_linhas, mv_folha_bloq, mv_folha_canc, mv_folha_familias.
+          'Atualizar todas as views' roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, depois as 5 MVs da Folha RF. Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
         </p>
       </section>
 

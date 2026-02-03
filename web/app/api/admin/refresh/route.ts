@@ -3,7 +3,7 @@ import { getSession, requireAdmin } from '@/lib/auth';
 import { queryMultiple } from '@/lib/db';
 import { getRefreshSql, type RefreshAction } from '@/lib/refresh-sql';
 
-const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf'];
+const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf', 'todas'];
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
@@ -27,10 +27,14 @@ export async function POST(request: NextRequest) {
     const statements = getRefreshSql(action as RefreshAction);
     await queryMultiple(statements);
 
+    const message =
+      action === 'todas'
+        ? 'Refresh executado: Família/CPF/Visitas e Folha RF.'
+        : `Refresh executado: ${action}.`;
     return NextResponse.json({
       ok: true,
       action,
-      message: `Refresh executado: ${action}.`,
+      message,
     });
   } catch (e) {
     console.error('Refresh error:', e);
