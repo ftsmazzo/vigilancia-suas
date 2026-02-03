@@ -21,7 +21,7 @@ const MULTI_VALUE_FILTERS = new Set<string>(['situacao_familia', 'tipo_atendimen
 
 function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
   const raw = searchParams.getAll(key).flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
-  return [...new Set(raw)];
+  return Array.from(new Set(raw));
 }
 
 /**
