@@ -12,9 +12,9 @@ export default function DashboardPage() {
           href="/consulta"
           className="card p-6 block hover:border-primary-300 hover:shadow-md transition-all"
         >
-          <h2 className="font-medium text-slate-800 mb-1">Consulta</h2>
+          <h2 className="font-medium text-slate-800 mb-1">Agenda Forms</h2>
           <p className="text-sm text-slate-500">
-            Navegar por views e tabelas (famílias, pessoas, folha RF, visitas, SIBEC).
+            Consultar visitas com situação da família. Filtros por bairro, bloqueados, cancelados e outros campos.
           </p>
         </Link>
         <Link

@@ -38,6 +38,15 @@ Ou use o script (com a app rodando):
 SEED_SECRET=xxx APP_URL=https://SEU-DOMINIO node web/scripts/seed-admin.js admin@email.com SenhaSegura
 ```
 
+## Atualizar após mudanças no GitHub
+
+Depois de dar push no repositório, o EasyPanel **não atualiza sozinho** a menos que esteja configurado para deploy automático. Para ver as mudanças:
+
+1. Abra o serviço **Vigilância** no EasyPanel.
+2. Use **Redeploy** (ou **Build** / **Deploy**) para fazer um novo build a partir do GitHub e subir o container de novo.
+
+Se o serviço foi criado com **GitHub** como fonte, verifique se existe opção de **Auto Deploy** (deploy automático a cada push); ative se quiser que cada push dispare um novo deploy.
+
 ## Variáveis (resumo)
 
 | Variável       | Obrigatório | Descrição                          |

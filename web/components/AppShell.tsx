@@ -11,7 +11,7 @@ interface AppShellProps {
 
 const nav = [
   { href: '/', label: 'Início' },
-  { href: '/consulta', label: 'Consulta' },
+  { href: '/consulta', label: 'Agenda Forms' },
   { href: '/admin', label: 'Manutenção', adminOnly: true },
 ];
 
