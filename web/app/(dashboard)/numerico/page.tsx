@@ -19,17 +19,40 @@ interface Stats {
   filtros: number;
 }
 
+/** Filtros: dicionário = string[] (múltiplos códigos); cras/bairro = string. */
+type FiltrosState = Record<string, string | string[]>;
+
 function formatNum(n: number): string {
   return n.toLocaleString('pt-BR');
 }
 
+function buildParams(filtros: FiltrosState): URLSearchParams {
+  const params = new URLSearchParams();
+  Object.entries(filtros).forEach(([k, v]) => {
+    if (Array.isArray(v)) {
+      v.forEach((val) => { if (val) params.append(k, val); });
+    } else if (v && String(v).trim()) {
+      params.set(k, String(v).trim());
+    }
+  });
+  return params;
+}
+
+function hasAnyFilter(filtros: FiltrosState): boolean {
+  return Object.entries(filtros).some(([, v]) =>
+    Array.isArray(v) ? v.length > 0 : Boolean(v && String(v).trim())
+  );
+}
+
 export default function NumericoPage() {
   const [campos, setCampos] = useState<CampoDicionario[]>([]);
+  const [crasOpcoes, setCrasOpcoes] = useState<{ nome: string; cod: string }[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingCras, setLoadingCras] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState('');
-  const [filtros, setFiltros] = useState<Record<string, string>>({});
+  const [filtros, setFiltros] = useState<FiltrosState>({});
 
   const loadDicionario = useCallback(() => {
     setLoading(true);
@@ -51,12 +74,21 @@ export default function NumericoPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadCras = useCallback(() => {
+    setLoadingCras(true);
+    fetch('/api/data/cras-opcoes')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.opcoes) setCrasOpcoes(data.opcoes);
+        else setCrasOpcoes([]);
+      })
+      .catch(() => setCrasOpcoes([]))
+      .finally(() => setLoadingCras(false));
+  }, []);
+
   const loadStats = useCallback(() => {
     setLoadingStats(true);
-    const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([k, v]) => {
-      if (v) params.set(k, v);
-    });
+    const params = buildParams(filtros);
     fetch(`/api/data/dashboard-stats?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
@@ -76,18 +108,37 @@ export default function NumericoPage() {
 
   useEffect(() => {
     loadDicionario();
-  }, [loadDicionario]);
+    loadCras();
+  }, [loadDicionario, loadCras]);
 
   useEffect(() => {
     loadStats();
   }, [loadStats]);
 
-  const handleFilterChange = (nomeCampo: string, value: string) => {
+  const handleMultiChange = (nomeCampo: string, cod: string, checked: boolean) => {
     setFiltros((prev) => {
-      const next = { ...prev };
-      if (value) next[nomeCampo] = value;
-      else delete next[nomeCampo];
-      return next;
+      const arr = (prev[nomeCampo] as string[] | undefined) ?? [];
+      const next = Array.isArray(arr) ? [...arr] : [];
+      if (checked) {
+        if (!next.includes(cod)) next.push(cod);
+      } else {
+        const i = next.indexOf(cod);
+        if (i >= 0) next.splice(i, 1);
+      }
+      const out = { ...prev };
+      if (next.length) out[nomeCampo] = next;
+      else delete out[nomeCampo];
+      return out;
+    });
+  };
+
+  const handleTextFilter = (key: string, value: string) => {
+    setFiltros((prev) => {
+      const out = { ...prev };
+      const v = value.trim();
+      if (v) out[key] = v;
+      else delete out[key];
+      return out;
     });
   };
 
@@ -95,14 +146,19 @@ export default function NumericoPage() {
     setFiltros({});
   };
 
-  const hasFilters = Object.keys(filtros).some((k) => filtros[k]);
+  const selectedValues = (nomeCampo: string): string[] => {
+    const v = filtros[nomeCampo];
+    return Array.isArray(v) ? v : [];
+  };
+
+  const hasFilters = hasAnyFilter(filtros);
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-slate-800">Dashboard Numérico</h1>
         <p className="text-slate-600 text-sm mt-1">
-          Vigilância Socioassistencial — totais de famílias e pessoas a partir do CADU. Use os filtros para refinar os números.
+          Vigilância Socioassistencial — totais de famílias e pessoas cruzados por código familiar. Selecione mais de uma opção nos filtros; CRAS e bairro por texto.
         </p>
       </div>
 
@@ -113,33 +169,61 @@ export default function NumericoPage() {
       )}
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-3">Filtros (dicionário)</h2>
+        <h2 className="font-medium text-slate-800 mb-3">Filtros (dicionário — múltipla escolha)</h2>
         {loading ? (
           <p className="text-slate-500 text-sm">Carregando opções…</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {campos.map((c) => (
-              <div key={c.nome_campo}>
-                <label htmlFor={c.nome_campo} className="label text-xs">
-                  {c.label}
-                </label>
-                <select
-                  id={c.nome_campo}
-                  value={filtros[c.nome_campo] ?? ''}
-                  onChange={(e) => handleFilterChange(c.nome_campo, e.target.value)}
-                  className="input text-sm py-2 w-full"
-                >
-                  <option value="">Todos</option>
+              <div key={c.nome_campo} className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                <p className="label text-xs font-medium text-slate-700 mb-2">{c.label}</p>
+                <div className="max-h-40 overflow-y-auto space-y-1.5">
                   {c.opcoes.map((o) => (
-                    <option key={o.cod} value={o.cod}>
-                      {o.descricao}
-                    </option>
+                    <label key={o.cod} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selectedValues(c.nome_campo).includes(o.cod)}
+                        onChange={(e) => handleMultiChange(c.nome_campo, o.cod, e.target.checked)}
+                        className="rounded border-slate-300"
+                      />
+                      <span className="text-slate-700">{o.descricao}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
             ))}
           </div>
         )}
+
+        <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="cras" className="label text-xs">CRAS de referência</label>
+            <select
+              id="cras"
+              value={(filtros.cras as string) ?? ''}
+              onChange={(e) => handleTextFilter('cras', e.target.value)}
+              className="input text-sm py-2 w-full"
+              disabled={loadingCras}
+            >
+              <option value="">Todos</option>
+              {crasOpcoes.map((o) => (
+                <option key={o.cod} value={o.nome}>{o.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="bairro" className="label text-xs">Bairro / Unidade territorial</label>
+            <input
+              id="bairro"
+              type="text"
+              value={(filtros.bairro as string) ?? ''}
+              onChange={(e) => handleTextFilter('bairro', e.target.value)}
+              placeholder="Digite parte do nome"
+              className="input text-sm py-2 w-full"
+            />
+          </div>
+        </div>
+
         {hasFilters && (
           <button
             type="button"
@@ -186,7 +270,7 @@ export default function NumericoPage() {
 
       {hasFilters && stats && (
         <p className="text-sm text-slate-500">
-          Números com {stats.filtros} filtro(s) aplicado(s). Altere os filtros acima para atualizar os totais.
+          Famílias e pessoas cruzadas por código familiar. Números com filtros aplicados.
         </p>
       )}
     </div>
