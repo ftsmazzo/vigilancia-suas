@@ -19,11 +19,10 @@ const PESSOA_COLUMNS = new Set([
   'p_fx_idade',
   'p_cod_parentesco_rf_pessoa',
 ]);
-/** Filtros de texto em família: ILIKE. */
-const FAM_TEXT_FILTERS: Record<string, string> = {
-  cras: 'd_nom_centro_assist_fam',
-  bairro: 'd_nom_unidade_territorial_fam',
-};
+/** CRAS: múltiplos valores, match exato no nome (d_nom_centro_assist_fam IN (...)). */
+const CRAS_COL = 'd_nom_centro_assist_fam';
+/** Bairro: um valor, ILIKE %valor% (d_nom_unidade_territorial_fam). */
+const BAIRRO_COL = 'd_nom_unidade_territorial_fam';
 
 function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
   const raw = searchParams.getAll(key).flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
@@ -46,7 +45,9 @@ export async function GET(request: NextRequest) {
 
   const famMulti: { col: string; vals: string[] }[] = [];
   const pessoaMulti: { col: string; vals: string[] }[] = [];
-  const famText: { col: string; param: string; val: string }[] = [];
+  const crasVals = getMultiValues(searchParams, 'cras');
+  const bairroVal = searchParams.get('bairro')?.trim() ?? '';
+
   let paramIndex = 1;
 
   for (const key of Array.from(FAM_COLUMNS)) {
@@ -57,10 +58,6 @@ export async function GET(request: NextRequest) {
     const vals = getMultiValues(searchParams, key);
     if (vals.length > 0) pessoaMulti.push({ col: key, vals });
   }
-  for (const [param, col] of Object.entries(FAM_TEXT_FILTERS)) {
-    const val = searchParams.get(param)?.trim();
-    if (val) famText.push({ col, param, val });
-  }
 
   const famConditions: string[] = [];
   const famParams: unknown[] = [];
@@ -69,9 +66,14 @@ export async function GET(request: NextRequest) {
     famConditions.push(`f.${f.col}::TEXT IN (${placeholders})`);
     famParams.push(...f.vals);
   }
-  for (const ft of famText) {
-    famConditions.push(`(f.${ft.col} IS NOT NULL AND f.${ft.col}::TEXT ILIKE $${paramIndex})`);
-    famParams.push(`%${ft.val}%`);
+  if (crasVals.length > 0) {
+    const placeholders = crasVals.map(() => `$${paramIndex++}`).join(', ');
+    famConditions.push(`(f.${CRAS_COL} IS NOT NULL AND f.${CRAS_COL}::TEXT IN (${placeholders}))`);
+    famParams.push(...crasVals);
+  }
+  if (bairroVal) {
+    famConditions.push(`(f.${BAIRRO_COL} IS NOT NULL AND f.${BAIRRO_COL}::TEXT ILIKE $${paramIndex})`);
+    famParams.push(`%${bairroVal}%`);
     paramIndex++;
   }
 
@@ -123,7 +125,7 @@ export async function GET(request: NextRequest) {
     }
 
     const totalFilterParams =
-      famParams.length + pessoaParams.length + famText.length;
+      famParams.length + pessoaParams.length;
 
     return NextResponse.json({
       totalFamilias,

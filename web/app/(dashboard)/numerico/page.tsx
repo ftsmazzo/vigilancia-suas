@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Opcao {
   cod: string;
@@ -47,12 +47,14 @@ function hasAnyFilter(filtros: FiltrosState): boolean {
 export default function NumericoPage() {
   const [campos, setCampos] = useState<CampoDicionario[]>([]);
   const [crasOpcoes, setCrasOpcoes] = useState<{ nome: string; cod: string }[]>([]);
+  const [bairroSugestoes, setBairroSugestoes] = useState<string[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCras, setLoadingCras] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState<FiltrosState>({});
+  const bairroDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadDicionario = useCallback(() => {
     setLoading(true);
@@ -140,6 +142,17 @@ export default function NumericoPage() {
       else delete out[key];
       return out;
     });
+    if (key === 'bairro' && value.trim().length >= 2) {
+      if (bairroDebounce.current) clearTimeout(bairroDebounce.current);
+      bairroDebounce.current = setTimeout(() => {
+        fetch(`/api/data/bairro-sugestoes?q=${encodeURIComponent(value.trim())}`)
+          .then((r) => r.json())
+          .then((data) => setBairroSugestoes(data.bairros ?? []))
+          .catch(() => setBairroSugestoes([]));
+      }, 300);
+    } else if (key === 'bairro') {
+      setBairroSugestoes([]);
+    }
   };
 
   const clearFilters = () => {
@@ -151,6 +164,7 @@ export default function NumericoPage() {
     return Array.isArray(v) ? v : [];
   };
 
+  const selectedCras = selectedValues('cras');
   const hasFilters = hasAnyFilter(filtros);
 
   return (
@@ -195,32 +209,49 @@ export default function NumericoPage() {
           </div>
         )}
 
-        <div className="mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
           <div>
-            <label htmlFor="cras" className="label text-xs">CRAS de referência</label>
-            <select
-              id="cras"
-              value={(filtros.cras as string) ?? ''}
-              onChange={(e) => handleTextFilter('cras', e.target.value)}
-              className="input text-sm py-2 w-full"
-              disabled={loadingCras}
-            >
-              <option value="">Todos</option>
-              {crasOpcoes.map((o) => (
-                <option key={o.cod} value={o.nome}>{o.nome}</option>
-              ))}
-            </select>
+            <p className="label text-xs font-medium text-slate-700 mb-2">CRAS de referência (múltipla escolha)</p>
+            {loadingCras ? (
+              <p className="text-slate-500 text-sm">Carregando…</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {crasOpcoes.map((o) => (
+                  <label key={o.cod} className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedCras.includes(o.nome)}
+                      onChange={(e) => handleMultiChange('cras', o.nome, e.target.checked)}
+                      className="rounded border-slate-300"
+                    />
+                    <span className="text-slate-700">{o.nome}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div>
-            <label htmlFor="bairro" className="label text-xs">Bairro / Unidade territorial</label>
+            <label htmlFor="bairro" className="label text-xs">Bairro / Unidade territorial (busca parcial)</label>
             <input
               id="bairro"
               type="text"
+              list="bairro-list"
               value={(filtros.bairro as string) ?? ''}
               onChange={(e) => handleTextFilter('bairro', e.target.value)}
-              placeholder="Digite parte do nome"
+              placeholder="Ex.: Dut → Dutra, Presidente Dutra"
               className="input text-sm py-2 w-full"
             />
+            <datalist id="bairro-list">
+              {bairroSugestoes.map((b) => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
+            {bairroSugestoes.length > 0 && (
+              <p className="text-xs text-slate-500 mt-1.5">
+                Bairros que batem: {bairroSugestoes.slice(0, 10).join(', ')}
+                {bairroSugestoes.length > 10 ? ` (+${bairroSugestoes.length - 10})` : ''}
+              </p>
+            )}
           </div>
         </div>
 
