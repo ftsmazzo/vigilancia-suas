@@ -19,12 +19,11 @@ const PESSOA_COLUMNS = new Set([
   'p_fx_idade',
   'p_cod_parentesco_rf_pessoa',
 ]);
-/** CRAS: múltiplos valores, match exato no nome (d_nom_centro_assist_fam IN (...)). */
-const CRAS_COL = 'd_nom_centro_assist_fam';
-/** Bairro: um valor, ILIKE em unidade territorial ou localidade. */
-const BAIRRO_COLS = ['d_nom_unidade_territorial_fam', 'd_nom_localidade_fam'] as const;
-
-/** Prazo de atualização cadastral: dias desde d_dat_atual_fam (dinâmico a partir de hoje). */
+/**
+ * Prazo de atualização cadastral: dias desde d_dat_atual_fam até hoje (CURRENT_DATE).
+ * Regra: mais de 12 meses e 1 dia = já é "De 12 a 24 meses"; mais de 24 meses e 1 dia = "De 24 a 48".
+ * ate_12: dias <= 365 | 12_24: 365 < dias <= 730 | 24_48: 730 < dias <= 1460 | mais_48: dias > 1460
+ */
 const PRAZO_ATUALIZACAO_DAYS: Record<string, { min?: number; max?: number }> = {
   ate_12: { max: 365 },
   '12_24': { min: 365, max: 730 },
@@ -39,9 +38,8 @@ function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
 
 /**
  * GET /api/data/dashboard-stats
- * Totais de famílias e pessoas cruzados por código familiar (d_cd_ibge + d_cod_familiar_fam).
- * Múltiplos valores por filtro: d_fx_rfpc=1&d_fx_rfpc=2.
- * cras e bairro: texto (ILIKE). Famílias e pessoas sempre consistentes (mesmo universo).
+ * Totais de famílias e pessoas cruzados por código familiar.
+ * Múltiplos valores por filtro. Prazo de atualização: múltiplas faixas (OR).
  */
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -53,9 +51,9 @@ export async function GET(request: NextRequest) {
 
   const famMulti: { col: string; vals: string[] }[] = [];
   const pessoaMulti: { col: string; vals: string[] }[] = [];
-  const crasVals = getMultiValues(searchParams, 'cras');
-  const bairroVal = searchParams.get('bairro')?.trim() ?? '';
-  const prazoVal = searchParams.get('prazo_atualizacao')?.trim() ?? '';
+  const prazoVals = getMultiValues(searchParams, 'prazo_atualizacao').filter(
+    (v) => v && PRAZO_ATUALIZACAO_DAYS[v]
+  );
 
   let paramIndex = 1;
 
@@ -75,31 +73,17 @@ export async function GET(request: NextRequest) {
     famConditions.push(`f.${f.col}::TEXT IN (${placeholders})`);
     famParams.push(...f.vals);
   }
-  if (crasVals.length > 0) {
-    const orCras = crasVals.map(() => `(f.${CRAS_COL} IS NOT NULL AND f.${CRAS_COL}::TEXT ILIKE $${paramIndex++})`).join(' OR ');
-    famConditions.push(`(${orCras})`);
-    famParams.push(...crasVals.map((v) => `%${v}%`));
-  }
-  if (bairroVal) {
-    const bairroPattern = `%${bairroVal}%`;
-    const bairroOr = BAIRRO_COLS.map(
-      (col) => `(f.${col} IS NOT NULL AND f.${col}::TEXT ILIKE $${paramIndex})`
-    ).join(' OR ');
-    famConditions.push(`(${bairroOr})`);
-    famParams.push(bairroPattern);
-    paramIndex++;
-  }
 
-  const prazoRange = prazoVal ? PRAZO_ATUALIZACAO_DAYS[prazoVal] : null;
-  if (prazoRange) {
+  if (prazoVals.length > 0) {
     const daysExpr = '(CURRENT_DATE - f.d_dat_atual_fam)';
-    famConditions.push(`(f.d_dat_atual_fam IS NOT NULL AND ${daysExpr} >= 0)`);
-    if (prazoRange.max != null) {
-      famConditions.push(`(${daysExpr} <= ${prazoRange.max})`);
-    }
-    if (prazoRange.min != null) {
-      famConditions.push(`(${daysExpr} > ${prazoRange.min})`);
-    }
+    const prazoOrParts: string[] = prazoVals.map((key) => {
+      const range = PRAZO_ATUALIZACAO_DAYS[key];
+      const parts: string[] = ['f.d_dat_atual_fam IS NOT NULL', `${daysExpr} >= 0`];
+      if (range.max != null) parts.push(`(${daysExpr} <= ${range.max})`);
+      if (range.min != null) parts.push(`(${daysExpr} > ${range.min})`);
+      return `(${parts.join(' AND ')})`;
+    });
+    famConditions.push(`(${prazoOrParts.join(' OR ')})`);
   }
 
   const pessoaConditions: string[] = [];
@@ -149,34 +133,12 @@ export async function GET(request: NextRequest) {
       totalPessoas = parseInt(resPessoa.rows[0]?.c ?? '0', 10);
     }
 
-    const totalFilterParams =
-      famParams.length + pessoaParams.length;
-
-    // Sempre retornar lista de bairros do resultado filtrado (mesmo filtros aplicados)
-    const allConditions = [...famConditions, ...pessoaConditions];
-    const allParams = [...famParams, ...pessoaParams];
-    const whereClause = allConditions.length ? `WHERE ${allConditions.join(' AND ')}` : '';
-    const baseFrom = hasPessoaFilters
-      ? `vw_familias_limpa f INNER JOIN vw_pessoas_limpa p ON ${join}`
-      : `vw_familias_limpa f`;
-    const sqlBairros =
-      `SELECT DISTINCT nome FROM (` +
-      `SELECT f.d_nom_unidade_territorial_fam AS nome FROM ${baseFrom} ${whereClause} ` +
-      `UNION SELECT f.d_nom_localidade_fam AS nome FROM ${baseFrom} ${whereClause}` +
-      `) t WHERE nome IS NOT NULL AND TRIM(nome) != '' ORDER BY nome LIMIT 500`;
-    let bairros: string[] = [];
-    try {
-      const resBairros = await query<{ nome: string }>(sqlBairros, allParams);
-      bairros = resBairros.rows.filter((r) => r.nome != null).map((r) => String(r.nome));
-    } catch (_) {
-      bairros = [];
-    }
+    const totalFilterParams = famParams.length + pessoaParams.length;
 
     return NextResponse.json({
       totalFamilias,
       totalPessoas,
       filtros: totalFilterParams,
-      bairros: bairros.length > 0 ? bairros : undefined,
     });
   } catch (e) {
     console.error('Dashboard stats error:', e);

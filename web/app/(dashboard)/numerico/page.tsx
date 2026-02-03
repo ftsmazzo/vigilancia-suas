@@ -17,18 +17,22 @@ interface Stats {
   totalFamilias: number;
   totalPessoas: number;
   filtros: number;
-  bairros?: string[];
 }
 
+/** Faixas de prazo: base = hoje. Mais de 12 meses e 1 dia = já "De 12 a 24"; mais de 24 meses e 1 dia = "De 24 a 48". */
 const PRAZO_OPCOES = [
-  { value: '', label: 'Qualquer' },
   { value: 'ate_12', label: 'Até 12 meses' },
   { value: '12_24', label: 'De 12 a 24 meses' },
   { value: '24_48', label: 'De 24 a 48 meses' },
   { value: 'mais_48', label: 'Mais de 48 meses' },
 ] as const;
 
-/** Filtros: dicionário = string[] (múltiplos códigos); cras/bairro = string. */
+function dataHojeFormatada(): string {
+  const d = new Date();
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/** Filtros: dicionário e prazo = string[] (múltipla escolha). */
 type FiltrosState = Record<string, string | string[]>;
 
 function formatNum(n: number): string {
@@ -55,15 +59,11 @@ function hasAnyFilter(filtros: FiltrosState): boolean {
 
 export default function NumericoPage() {
   const [campos, setCampos] = useState<CampoDicionario[]>([]);
-  const [crasOpcoes, setCrasOpcoes] = useState<{ nome: string; cod: string }[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [bairrosNaConsulta, setBairrosNaConsulta] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCras, setLoadingCras] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState<FiltrosState>({});
-  const [bairroInput, setBairroInput] = useState('');
 
   const loadDicionario = useCallback(() => {
     setLoading(true);
@@ -85,18 +85,6 @@ export default function NumericoPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const loadCras = useCallback(() => {
-    setLoadingCras(true);
-    fetch('/api/data/cras-opcoes')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.opcoes) setCrasOpcoes(data.opcoes);
-        else setCrasOpcoes([]);
-      })
-      .catch(() => setCrasOpcoes([]))
-      .finally(() => setLoadingCras(false));
-  }, []);
-
   const loadStats = useCallback(() => {
     setLoadingStats(true);
     const params = buildParams(filtros);
@@ -105,27 +93,21 @@ export default function NumericoPage() {
       .then((data) => {
         if (data.error) {
           setStats(null);
-          setBairrosNaConsulta([]);
         } else {
           setStats({
             totalFamilias: data.totalFamilias ?? 0,
             totalPessoas: data.totalPessoas ?? 0,
             filtros: data.filtros ?? 0,
           });
-          setBairrosNaConsulta(data.bairros ?? []);
         }
       })
-      .catch(() => {
-        setStats(null);
-        setBairrosNaConsulta([]);
-      })
+      .catch(() => setStats(null))
       .finally(() => setLoadingStats(false));
   }, [filtros]);
 
   useEffect(() => {
     loadDicionario();
-    loadCras();
-  }, [loadDicionario, loadCras]);
+  }, [loadDicionario]);
 
   useEffect(() => {
     loadStats();
@@ -148,30 +130,14 @@ export default function NumericoPage() {
     });
   };
 
-  const handleBairroInput = (value: string) => setBairroInput(value);
-
-  const applyBairroFilter = () => {
-    const v = bairroInput.trim();
-    setFiltros((prev) => {
-      const out = { ...prev };
-      if (v) out.bairro = v;
-      else delete out.bairro;
-      return out;
-    });
-  };
-
-  const clearFilters = () => {
-    setFiltros({});
-    setBairroInput('');
-    setBairrosNaConsulta([]);
-  };
+  const clearFilters = () => setFiltros({});
 
   const selectedValues = (nomeCampo: string): string[] => {
     const v = filtros[nomeCampo];
     return Array.isArray(v) ? v : [];
   };
 
-  const selectedCras = selectedValues('cras');
+  const selectedPrazos = selectedValues('prazo_atualizacao');
   const hasFilters = hasAnyFilter(filtros);
 
   return (
@@ -179,7 +145,7 @@ export default function NumericoPage() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-800">Dashboard Numérico</h1>
         <p className="text-slate-600 text-sm mt-1">
-          Vigilância Socioassistencial — totais de famílias e pessoas cruzados por código familiar. Selecione mais de uma opção nos filtros; CRAS e bairro por texto.
+          Vigilância Socioassistencial — totais de famílias e pessoas cruzados por código familiar. Selecione mais de uma opção nos filtros.
         </p>
       </div>
 
@@ -218,58 +184,23 @@ export default function NumericoPage() {
 
         <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
           <div>
-            <p className="label text-xs font-medium text-slate-700 mb-2">CRAS de referência (múltipla escolha)</p>
-            {loadingCras ? (
-              <p className="text-slate-500 text-sm">Carregando…</p>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {crasOpcoes.map((o) => (
-                  <label key={o.cod} className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedCras.includes(o.nome)}
-                      onChange={(e) => handleMultiChange('cras', o.nome, e.target.checked)}
-                      className="rounded border-slate-300"
-                    />
-                    <span className="text-slate-700">{o.nome}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label htmlFor="bairro" className="label text-xs">Bairro / Unidade territorial (busca parcial)</label>
-            <input
-              id="bairro"
-              type="text"
-              value={bairroInput}
-              onChange={(e) => handleBairroInput(e.target.value)}
-              onBlur={applyBairroFilter}
-              onKeyDown={(e) => e.key === 'Enter' && applyBairroFilter()}
-              placeholder="Digite (ex.: Dutr) e pressione Enter ou saia do campo para aplicar"
-              className="input text-sm py-2 w-full"
-            />
-          </div>
-          <div>
-            <label htmlFor="prazo_atualizacao" className="label text-xs">Prazo de atualização cadastral (a partir de hoje)</label>
-            <select
-              id="prazo_atualizacao"
-              value={(filtros.prazo_atualizacao as string) ?? ''}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFiltros((prev) => {
-                  const out = { ...prev };
-                  if (v) out.prazo_atualizacao = v;
-                  else delete out.prazo_atualizacao;
-                  return out;
-                });
-              }}
-              className="input text-sm py-2 w-full"
-            >
+            <p className="label text-xs font-medium text-slate-700 mb-1">Prazo de atualização cadastral (múltipla escolha)</p>
+            <p className="text-xs text-slate-500 mb-2">
+              Data de referência: <strong>{dataHojeFormatada()} (hoje)</strong>. Mais de 12 meses e 1 dia = desatualizado (entra em &quot;De 12 a 24 meses&quot;). Mais de 24 meses e 1 dia = &quot;De 24 a 48 meses&quot;.
+            </p>
+            <div className="flex flex-wrap gap-3">
               {PRAZO_OPCOES.map((o) => (
-                <option key={o.value || 'qualquer'} value={o.value}>{o.label}</option>
+                <label key={o.value} className="flex items-center gap-2 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedPrazos.includes(o.value)}
+                    onChange={(e) => handleMultiChange('prazo_atualizacao', o.value, e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  <span className="text-slate-700">{o.label}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         </div>
 
@@ -317,24 +248,9 @@ export default function NumericoPage() {
         </div>
       </section>
 
-      {bairrosNaConsulta.length > 0 && (
-        <section className="card p-6">
-          <h2 className="font-medium text-slate-800 mb-2">Bairros nesta consulta</h2>
-          <p className="text-sm text-slate-600 mb-2">
-            Bairros/unidades territoriais presentes no resultado filtrado ({bairrosNaConsulta.length}
-            {bairrosNaConsulta.length >= 500 ? ' — exibindo até 500' : ''}):
-          </p>
-          <ul className="flex flex-wrap gap-2 text-sm text-slate-700">
-            {bairrosNaConsulta.map((b) => (
-              <li key={b} className="px-2 py-1 rounded bg-slate-100">{b}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {hasFilters && stats && (
         <p className="text-sm text-slate-500">
-          Famílias e pessoas cruzadas por código familiar. Prazo de atualização calculado a partir de hoje.
+          Famílias e pessoas cruzadas por código familiar. Prazo de atualização em relação à data de hoje.
         </p>
       )}
     </div>
