@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 
 /**
  * GET /api/data/cras-opcoes
- * Retorna lista de CRAS de referência (d_nom_centro_assist_fam) para filtro na dashboard.
+ * Retorna apenas CRAS 1, CRAS 2, CRAS 3, etc. (extrai do campo; exclui CREAS, POP e outros).
  */
 export async function GET() {
   const user = await getSession();
@@ -13,16 +13,19 @@ export async function GET() {
   }
 
   try {
-    const { rows } = await query<{ nome: string; cod: string }>(
-      `SELECT DISTINCT NULLIF(TRIM(d_nom_centro_assist_fam), '') AS nome, NULLIF(TRIM(d_cod_centro_assist_fam), '') AS cod
+    const { rows } = await query<{ nome: string }>(
+      `SELECT DISTINCT
+         regexp_replace(trim((regexp_matches(d_nom_centro_assist_fam, 'CRAS\s*\d+', 'i'))[1]), '\s+', ' ', 'g') AS nome
        FROM vw_familias_limpa
-       WHERE NULLIF(TRIM(d_nom_centro_assist_fam), '') IS NOT NULL
+       WHERE d_nom_centro_assist_fam IS NOT NULL
+         AND trim(d_nom_centro_assist_fam) ~* 'CRAS\s*\d+'
+         AND trim(d_nom_centro_assist_fam) !~* 'CREAS'
        ORDER BY nome`
     );
 
     const opcoes = rows
-      .filter((r) => r.nome != null)
-      .map((r) => ({ nome: String(r.nome), cod: r.cod != null ? String(r.cod) : String(r.nome) }));
+      .filter((r) => r.nome != null && String(r.nome).trim() !== '')
+      .map((r) => ({ nome: String(r.nome).trim(), cod: String(r.nome).trim() }));
 
     return NextResponse.json({ opcoes });
   } catch (e) {

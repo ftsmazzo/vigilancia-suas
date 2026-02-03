@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
     famParams.push(...f.vals);
   }
   if (crasVals.length > 0) {
-    const placeholders = crasVals.map(() => `$${paramIndex++}`).join(', ');
-    famConditions.push(`(f.${CRAS_COL} IS NOT NULL AND f.${CRAS_COL}::TEXT IN (${placeholders}))`);
-    famParams.push(...crasVals);
+    const orCras = crasVals.map(() => `(f.${CRAS_COL} IS NOT NULL AND f.${CRAS_COL}::TEXT ILIKE $${paramIndex++})`).join(' OR ');
+    famConditions.push(`(${orCras})`);
+    famParams.push(...crasVals.map((v) => `%${v}%`));
   }
   if (bairroVal) {
     famConditions.push(`(f.${BAIRRO_COL} IS NOT NULL AND f.${BAIRRO_COL}::TEXT ILIKE $${paramIndex})`);

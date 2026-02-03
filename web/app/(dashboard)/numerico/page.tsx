@@ -54,6 +54,7 @@ export default function NumericoPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState<FiltrosState>({});
+  const [bairroInput, setBairroInput] = useState('');
   const bairroDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadDicionario = useCallback(() => {
@@ -134,15 +135,9 @@ export default function NumericoPage() {
     });
   };
 
-  const handleTextFilter = (key: string, value: string) => {
-    setFiltros((prev) => {
-      const out = { ...prev };
-      const v = value.trim();
-      if (v) out[key] = v;
-      else delete out[key];
-      return out;
-    });
-    if (key === 'bairro' && value.trim().length >= 2) {
+  const handleBairroInput = (value: string) => {
+    setBairroInput(value);
+    if (value.trim().length >= 2) {
       if (bairroDebounce.current) clearTimeout(bairroDebounce.current);
       bairroDebounce.current = setTimeout(() => {
         fetch(`/api/data/bairro-sugestoes?q=${encodeURIComponent(value.trim())}`)
@@ -150,13 +145,25 @@ export default function NumericoPage() {
           .then((data) => setBairroSugestoes(data.bairros ?? []))
           .catch(() => setBairroSugestoes([]));
       }, 300);
-    } else if (key === 'bairro') {
+    } else {
       setBairroSugestoes([]);
     }
   };
 
+  const applyBairroFilter = () => {
+    const v = bairroInput.trim();
+    setFiltros((prev) => {
+      const out = { ...prev };
+      if (v) out.bairro = v;
+      else delete out.bairro;
+      return out;
+    });
+  };
+
   const clearFilters = () => {
     setFiltros({});
+    setBairroInput('');
+    setBairroSugestoes([]);
   };
 
   const selectedValues = (nomeCampo: string): string[] => {
@@ -236,9 +243,11 @@ export default function NumericoPage() {
               id="bairro"
               type="text"
               list="bairro-list"
-              value={(filtros.bairro as string) ?? ''}
-              onChange={(e) => handleTextFilter('bairro', e.target.value)}
-              placeholder="Ex.: Dut → Dutra, Presidente Dutra"
+              value={bairroInput}
+              onChange={(e) => handleBairroInput(e.target.value)}
+              onBlur={applyBairroFilter}
+              onKeyDown={(e) => e.key === 'Enter' && applyBairroFilter()}
+              placeholder="Digite (ex.: Dut) e pressione Enter ou saia do campo para aplicar"
               className="input text-sm py-2 w-full"
             />
             <datalist id="bairro-list">
