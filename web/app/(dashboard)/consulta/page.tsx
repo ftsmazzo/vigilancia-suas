@@ -73,19 +73,23 @@ function downloadCsv(csv: string, filename: string) {
   URL.revokeObjectURL(a.href);
 }
 
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+
 export default function ConsultaPage() {
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
     const params = new URLSearchParams();
-    params.set('limit', '100');
-    params.set('offset', '0');
+    params.set('limit', String(pageSize));
+    params.set('offset', String((page - 1) * pageSize));
     Object.entries(filters).forEach(([k, v]) => {
       if (v.trim()) params.set(k, v.trim());
     });
@@ -107,11 +111,15 @@ export default function ConsultaPage() {
         setTotal(0);
       })
       .finally(() => setLoading(false));
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -119,7 +127,11 @@ export default function ConsultaPage() {
 
   const handleApplyFilters = (e: React.FormEvent) => {
     e.preventDefault();
-    load();
+    setPage(1);
+  };
+
+  const goToPage = (p: number) => {
+    setPage(Math.max(1, Math.min(p, totalPages)));
   };
 
   const handleExportCsv = () => {
@@ -199,9 +211,24 @@ export default function ConsultaPage() {
       )}
 
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
           <span className="font-medium text-slate-700">Resultados</span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              Por página
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="input py-1.5 text-sm w-20"
+              >
+                {PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </label>
             {rows.length > 0 && (
               <button
                 type="button"
@@ -215,10 +242,33 @@ export default function ConsultaPage() {
               </button>
             )}
             <span className="text-sm text-slate-500">
-              {total} registro(s){loading ? ' — carregando…' : ''}
+              {total === 0 ? '0 registros' : `Mostrando ${from}–${to} de ${total}`}{loading ? ' — carregando…' : ''}
             </span>
           </div>
         </div>
+        {total > 0 && totalPages > 1 && (
+          <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between text-sm">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1 || loading}
+              className="btn-secondary py-1.5 px-3 disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span className="text-slate-600">
+              Página {page} de {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages || loading}
+              className="btn-secondary py-1.5 px-3 disabled:opacity-50"
+            >
+              Próxima
+            </button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-8 text-center text-slate-500">Carregando…</div>

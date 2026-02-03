@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -101,6 +102,19 @@ export default function AdminPage() {
         <p className="mt-3 text-xs text-slate-400">
           Família/CPF/Visitas: mv_familia_situacao, mv_cpf_familia_situacao. Folha RF: mv_folha_base, mv_folha_linhas, mv_folha_bloq, mv_folha_canc, mv_folha_familias.
         </p>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Usuários consulta</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Adicione e exclua usuários com perfil consulta (rotativos). Eles só acessam a Agenda Forms.
+        </p>
+        <Link
+          href="/admin/usuarios"
+          className="btn-primary text-sm inline-flex items-center gap-1.5"
+        >
+          Gerenciar usuários consulta
+        </Link>
       </section>
 
       <section className="card p-6 border-dashed border-slate-300">
