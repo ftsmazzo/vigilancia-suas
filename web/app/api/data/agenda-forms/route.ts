@@ -9,8 +9,7 @@ const DEFAULT_LIMIT = 100;
 const FILTER_COLUMNS: Record<string, string> = {
   bairro: 'bairro',
   situacao_familia: 'situacao_familia',
-  bloqueados: 'bloqueados',
-  cancelados: 'cancelados',
+  ja_teve_visita: 'ja_teve_visita',
   ainda_precisa_visita: 'ainda_precisa_visita',
   tipo_atendimento: 'tipo_atendimento',
   local_atendimento: 'local_atendimento',

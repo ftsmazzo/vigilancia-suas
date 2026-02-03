@@ -39,8 +39,6 @@ export const AGENDA_FORMS_COLUMNS: { key: string; label: string }[] = [
   { key: 'teve_visita2', label: 'Teve Visita 2' },
   { key: 'teve_visita3', label: 'Teve Visita 3' },
   { key: 'ainda_precisa_visita', label: 'Ainda Precisa Visita' },
-  { key: 'bloqueados', label: 'Bloqueados' },
-  { key: 'cancelados', label: 'Cancelados' },
   { key: 'cancelado_em', label: 'Cancelado Em' },
   { key: 'tempo_desde_ultima_atualizacao', label: 'Tempo Desde Última Atualização' },
   { key: 'situacao_familia', label: 'Situação Família' },
@@ -52,8 +50,7 @@ export const AGENDA_FORMS_COLUMNS: { key: string; label: string }[] = [
 export const AGENDA_FORMS_FILTERS = [
   { key: 'bairro', label: 'Bairro', placeholder: 'Ex.: Centro' },
   { key: 'situacao_familia', label: 'Situação Família', placeholder: 'LIBERADO, BLOQUEADO ou CANCELADO' },
-  { key: 'bloqueados', label: 'Bloqueados', placeholder: 'Texto' },
-  { key: 'cancelados', label: 'Cancelados', placeholder: 'Texto' },
+  { key: 'ja_teve_visita', label: 'Já Teve Visita', placeholder: 'Sim/Não' },
   { key: 'ainda_precisa_visita', label: 'Ainda Precisa Visita', placeholder: 'Sim/Não' },
   { key: 'tipo_atendimento', label: 'Tipo Atendimento', placeholder: 'Texto' },
   { key: 'local_atendimento', label: 'Local Atendimento', placeholder: 'Texto' },

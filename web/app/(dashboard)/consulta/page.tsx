@@ -12,6 +12,13 @@ function toUpper(val: unknown): string {
   return s ? s.toUpperCase() : '—';
 }
 
+/** Contato: apenas dígitos do telefone (remove espaços, texto, caracteres, observações). */
+function sanitizeTelefoneDisplay(val: unknown): string {
+  if (val == null || String(val).trim() === '') return '—';
+  const digits = String(val).replace(/\D/g, '');
+  return digits || '—';
+}
+
 function formatEndereco(row: Record<string, unknown>): string {
   const rua = row.nome_rua != null ? String(row.nome_rua).trim() : '';
   const num = row.numero != null ? String(row.numero).trim() : '';
@@ -36,6 +43,7 @@ function whatsAppLink(telefone: unknown): string | null {
 
 function getCellValueForCsv(row: Record<string, unknown>, key: string): string {
   if (key === 'endereco') return formatEndereco(row);
+  if (key === 'telefone_contato') return sanitizeTelefoneDisplay(row.telefone_contato);
   if (key === 'whatsapp') return whatsAppLink(row.telefone_contato) ?? '—';
   return toUpper(row[key]);
 }
@@ -122,6 +130,7 @@ export default function ConsultaPage() {
 
   const getCellValue = (row: Record<string, unknown>, key: string): string | React.ReactNode => {
     if (key === 'endereco') return formatEndereco(row);
+    if (key === 'telefone_contato') return sanitizeTelefoneDisplay(row.telefone_contato);
     if (key === 'whatsapp') {
       const link = whatsAppLink(row.telefone_contato);
       if (!link) return '—';
