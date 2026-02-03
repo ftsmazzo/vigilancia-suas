@@ -4,6 +4,79 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+function UploadForm({
+  type,
+  label,
+  accept,
+  hint,
+}: {
+  type: string;
+  label: string;
+  accept: string;
+  hint: string;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      setUploadMsg({ type: 'err', text: 'Selecione um arquivo.' });
+      return;
+    }
+    setUploadMsg(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set('file', file);
+      const res = await fetch(`/api/admin/upload/${type}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setUploadMsg({ type: 'err', text: data.error || 'Falha no upload.' });
+        return;
+      }
+      setUploadMsg({
+        type: 'ok',
+        text: data.message + (data.hint ? ` ${data.hint}` : ''),
+      });
+      setFile(null);
+    } catch {
+      setUploadMsg({ type: 'err', text: 'Erro de conexão.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-4 p-4 rounded-lg border border-slate-200 bg-slate-50/50">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[200px]">
+          <label className="label text-xs">{label}</label>
+          <input
+            type="file"
+            accept={accept}
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="input text-sm py-1.5"
+          />
+          <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+        </div>
+        <button type="submit" disabled={uploading} className="btn-primary text-sm disabled:opacity-50">
+          {uploading ? 'Enviando…' : 'Enviar'}
+        </button>
+      </div>
+      {uploadMsg && (
+        <p className={`mt-2 text-sm ${uploadMsg.type === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
+          {uploadMsg.text}
+        </p>
+      )}
+    </form>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<{ role: string } | null>(null);
@@ -62,8 +135,7 @@ export default function AdminPage() {
     <div className="space-y-8 max-w-2xl">
       <h1 className="text-2xl font-semibold text-slate-800">Manutenção</h1>
       <p className="text-slate-600 text-sm">
-        Atualize as materialized views após novas inserções para manter os dados alinhados.
-        O upload de arquivos raw será integrado em breve (N8N ou pipeline direto).
+        Faça upload de CADU, Bloqueados, Cancelados e Folha de Pagamento; depois use &quot;Atualizar todas as views&quot; para repopular as materialized views. Visitas continua via Google Sheets com gatilho de agenda.
       </p>
 
       {message && (
@@ -113,6 +185,17 @@ export default function AdminPage() {
       </section>
 
       <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Upload de extrações</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Carregue os CSVs no banco. <strong>Depois de cada upload</strong>, clique em &quot;Atualizar todas as views&quot; acima para repopular as consultas (Agenda Forms, etc.). Visitas continua no Google Sheets com gatilho de agenda no N8N.
+        </p>
+        <UploadForm type="cadu" label="CADU" accept=".csv" hint="CSV com ; (ponto e vírgula), cabeçalho d. / p." />
+        <UploadForm type="sibec-bloqueados" label="SIBEC Bloqueados" accept=".csv" hint="CSV com vírgula" />
+        <UploadForm type="sibec-cancelados" label="SIBEC Cancelados" accept=".csv" hint="CSV com vírgula" />
+        <UploadForm type="sibec-folha" label="SIBEC Folha de Pagamento" accept=".csv" hint="CSV com vírgula" />
+      </section>
+
+      <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Usuários consulta</h2>
         <p className="text-sm text-slate-500 mb-3">
           Adicione e exclua usuários com perfil consulta (rotativos). Eles só acessam a Agenda Forms.
@@ -123,14 +206,6 @@ export default function AdminPage() {
         >
           Gerenciar usuários consulta
         </Link>
-      </section>
-
-      <section className="card p-6 border-dashed border-slate-300">
-        <h2 className="font-medium text-slate-800 mb-2">Upload de arquivos raw</h2>
-        <p className="text-sm text-slate-500">
-          Em breve: upload de CSV CADU, SIBEC (Bloqueados, Cancelados, Folha) e Visitas.
-          Por enquanto, use os workflows N8N ou carga manual.
-        </p>
       </section>
     </div>
   );

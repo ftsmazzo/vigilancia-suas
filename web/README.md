@@ -9,7 +9,7 @@ Aplicação web para consulta e manutenção dos dados do projeto Vigilância So
 - **Consulta**: listagem de views/tabelas e visualização de dados (paginação simples)
 - **Manutenção (admin)**:
   - Refresh de materialized views (Família/CPF/Visitas e Folha RF)
-  - Upload de arquivos raw (em breve: CADU, SIBEC, Visitas)
+  - Upload de arquivos raw: CADU, SIBEC Bloqueados, Cancelados, Folha de Pagamento (Visitas continua via Google Sheets + gatilho)
 
 ## Pré-requisitos
 
