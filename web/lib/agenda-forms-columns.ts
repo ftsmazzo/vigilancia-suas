@@ -52,7 +52,7 @@ export const AGENDA_FORMS_FILTERS = [
   { key: 'situacao_familia', label: 'Situação Família', placeholder: 'Vários: LIBERADO, BLOQUEADO, CANCELADO (separar por vírgula)' },
   { key: 'ja_teve_visita', label: 'Já Teve Visita', placeholder: 'Sim/Não' },
   { key: 'ainda_precisa_visita', label: 'Ainda Precisa Visita', placeholder: 'Sim/Não' },
-  { key: 'tipo_atendimento', label: 'Tipo Atendimento', placeholder: 'Vários: 1, 5, 6 (separar por vírgula)' },
+  { key: 'tipo_atendimento', label: 'Tipo Atendimento', placeholder: 'Números: 5, 6 (começa com; separar por vírgula)' },
   { key: 'local_atendimento', label: 'Local Atendimento', placeholder: 'Texto' },
   { key: 'atendente', label: 'Atendente', placeholder: 'Nome' },
 ];

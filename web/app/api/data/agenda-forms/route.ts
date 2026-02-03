@@ -16,8 +16,9 @@ const FILTER_COLUMNS: Record<string, string> = {
   atendente: 'atendente',
 };
 
-/** Filtros que aceitam múltiplos valores (ex.: CANCELADO e BLOQUEADO; tipos 1, 5 e 6). Usar IN. */
-const MULTI_VALUE_FILTERS = new Set<string>(['situacao_familia', 'tipo_atendimento']);
+/** Filtros que aceitam múltiplos valores. situacao_familia = IN exato; tipo_atendimento = começa com (ex.: 5 → "5 - ..."). */
+const MULTI_VALUE_EXACT = new Set<string>(['situacao_familia']);
+const MULTI_VALUE_STARTS = new Set<string>(['tipo_atendimento']);
 
 function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
   const raw = searchParams.getAll(key).flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
@@ -44,13 +45,19 @@ export async function GET(request: NextRequest) {
   let paramIndex = 1;
 
   for (const [key, col] of Object.entries(FILTER_COLUMNS)) {
-    if (MULTI_VALUE_FILTERS.has(key)) {
+    if (MULTI_VALUE_EXACT.has(key)) {
       const values = getMultiValues(searchParams, key);
       if (values.length === 0) continue;
       const norm = key === 'situacao_familia' ? values.map((v) => v.toUpperCase()) : values;
       const placeholders = norm.map(() => `$${paramIndex++}`).join(', ');
       conditions.push(`NULLIF(TRIM(${col}), '') IN (${placeholders})`);
       params.push(...norm);
+    } else if (MULTI_VALUE_STARTS.has(key)) {
+      const values = getMultiValues(searchParams, key);
+      if (values.length === 0) continue;
+      const orParts = values.map(() => `TRIM(${col}) ILIKE $${paramIndex++} || '%'`);
+      conditions.push(`(${orParts.join(' OR ')})`);
+      params.push(...values);
     } else {
       const value = searchParams.get(key)?.trim();
       if (!value) continue;
