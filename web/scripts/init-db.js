@@ -25,11 +25,15 @@ async function main() {
   const client = new Client({ connectionString: url });
   try {
     await client.connect();
-    const statements = sql
-      .split(';')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith('--'));
-    for (const st of statements) {
+    const rawStatements = sql.split(';').map((s) => s.trim()).filter((s) => s.length > 0);
+    for (const raw of rawStatements) {
+      // Remove linhas que são só comentário (--), para não descartar "CREATE SCHEMA" que vem após comentários
+      const st = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.startsWith('--'))
+        .join('\n')
+        .trim();
       if (st) await client.query(st + ';');
     }
     console.log('[init-db] Schema app aplicado com sucesso.');
