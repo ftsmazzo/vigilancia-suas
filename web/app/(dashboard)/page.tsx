@@ -7,7 +7,16 @@ export default function DashboardPage() {
       <p className="text-slate-600 mb-8">
         Bem-vindo ao painel Vigilância Socioassistencial. Use o menu para acessar consultas ou manutenção.
       </p>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Link
+          href="/numerico"
+          className="card p-6 block hover:border-primary-300 hover:shadow-md transition-all"
+        >
+          <h2 className="font-medium text-slate-800 mb-1">Dashboard Numérico</h2>
+          <p className="text-sm text-slate-500">
+            Totais de famílias e pessoas com filtros por dicionário (sexo, raça, faixa renda, etc.).
+          </p>
+        </Link>
         <Link
           href="/consulta"
           className="card p-6 block hover:border-primary-300 hover:shadow-md transition-all"
