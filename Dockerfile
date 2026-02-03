@@ -12,6 +12,8 @@ COPY web/package.json web/package-lock.json* ./
 RUN npm ci 2>/dev/null || npm install
 
 COPY web/ .
+# Garante que public existe (Next.js pode não criar se estiver vazio)
+RUN mkdir -p public
 RUN npm run build
 
 # Run
