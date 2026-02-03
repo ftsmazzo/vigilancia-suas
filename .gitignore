@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Next.js
+web/.next/
+web/out/
+
+# Build
+.next/
+out/
+
+# Env (nunca commitar senhas)
+.env
+.env.local
+.env.*.local
+easypanel.env
+
+# Debug / IDE
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Vercel
+.vercel
+
+# Dados grandes (evitar limite 100 MB do GitHub)
+**/tudo.csv
+SIBEC-*.csv
+Dezembro/tudo.csv
+Janeiro/tudo.csv
