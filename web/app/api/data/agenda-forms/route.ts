@@ -16,10 +16,18 @@ const FILTER_COLUMNS: Record<string, string> = {
   atendente: 'atendente',
 };
 
+/** Filtros que aceitam múltiplos valores (ex.: CANCELADO e BLOQUEADO; tipos 1, 5 e 6). Usar IN. */
+const MULTI_VALUE_FILTERS = new Set<string>(['situacao_familia', 'tipo_atendimento']);
+
+function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
+  const raw = searchParams.getAll(key).flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
+  return [...new Set(raw)];
+}
+
 /**
  * GET /api/data/agenda-forms
  * Consulta vw_filtro_controle com filtros opcionais.
- * Query params: limit, offset, e qualquer chave de FILTER_COLUMNS (valor = filtro ILIKE ou exato).
+ * situacao_familia e tipo_atendimento aceitam vários valores (vírgula ou params repetidos).
  */
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -36,11 +44,20 @@ export async function GET(request: NextRequest) {
   let paramIndex = 1;
 
   for (const [key, col] of Object.entries(FILTER_COLUMNS)) {
-    const value = searchParams.get(key)?.trim();
-    if (!value) continue;
-    conditions.push(`NULLIF(TRIM(${col}), '') ILIKE $${paramIndex}`);
-    params.push(`%${value}%`);
-    paramIndex++;
+    if (MULTI_VALUE_FILTERS.has(key)) {
+      const values = getMultiValues(searchParams, key);
+      if (values.length === 0) continue;
+      const norm = key === 'situacao_familia' ? values.map((v) => v.toUpperCase()) : values;
+      const placeholders = norm.map(() => `$${paramIndex++}`).join(', ');
+      conditions.push(`NULLIF(TRIM(${col}), '') IN (${placeholders})`);
+      params.push(...norm);
+    } else {
+      const value = searchParams.get(key)?.trim();
+      if (!value) continue;
+      conditions.push(`NULLIF(TRIM(${col}), '') ILIKE $${paramIndex}`);
+      params.push(`%${value}%`);
+      paramIndex++;
+    }
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
