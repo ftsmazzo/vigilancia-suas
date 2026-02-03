@@ -37,4 +37,32 @@ export async function queryMultiple(scripts: string[]): Promise<void> {
   }
 }
 
+const REFRESH_MV_NAME = /REFRESH\s+MATERIALIZED\s+VIEW\s+(?:CONCURRENTLY\s+)?(\w+)/i;
+
+export async function runRefreshStatements(scripts: string[]): Promise<{
+  refreshed: string[];
+  failed: { name: string; error: string }[];
+}> {
+  const refreshed: string[] = [];
+  const failed: { name: string; error: string }[] = [];
+  const client = await pool.connect();
+  try {
+    for (const sql of scripts) {
+      const trimmed = sql.trim();
+      if (!trimmed) continue;
+      const match = trimmed.match(REFRESH_MV_NAME);
+      const name = match ? match[1] : trimmed.slice(0, 50);
+      try {
+        await client.query(trimmed);
+        refreshed.push(name);
+      } catch (e) {
+        failed.push({ name, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    return { refreshed, failed };
+  } finally {
+    client.release();
+  }
+}
+
 export default pool;

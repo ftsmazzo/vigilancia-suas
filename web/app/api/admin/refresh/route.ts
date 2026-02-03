@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, requireAdmin } from '@/lib/auth';
-import { queryMultiple } from '@/lib/db';
+import { runRefreshStatements } from '@/lib/db';
 import { getRefreshSql, type RefreshAction } from '@/lib/refresh-sql';
 
 const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf', 'todas'];
@@ -25,16 +25,23 @@ export async function POST(request: NextRequest) {
     }
 
     const statements = getRefreshSql(action as RefreshAction);
-    await queryMultiple(statements);
+    const { refreshed, failed } = await runRefreshStatements(statements);
 
-    const message =
+    let message =
       action === 'todas'
         ? 'Refresh executado: Família/CPF/Visitas e Folha RF.'
         : `Refresh executado: ${action}.`;
+    if (refreshed.length) message += ` Atualizadas: ${refreshed.join(', ')}.`;
+    if (failed.length) {
+      message += ` Não existem ou falharam: ${failed.map((f) => f.name).join(', ')}. Rode os scripts de criação das views (ver ESTRUTURA_BANCO_VIEWS.md → Restaurar views).`;
+    }
+
     return NextResponse.json({
       ok: true,
       action,
       message,
+      refreshed,
+      failed: failed.length ? failed : undefined,
     });
   } catch (e) {
     console.error('Refresh error:', e);

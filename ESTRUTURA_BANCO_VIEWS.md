@@ -29,6 +29,8 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 | `app.users` | `create_schema_app.sql` | Usuários da aplicação web (login). Aplicado automaticamente na primeira subida do container. |
 | `tbl_codigos_cadu` | `create_tbl_codigos_cadu.sql` + `insert_tbl_codigos_cadu_generated.sql` | Descritores do dicionário (sexo, raça, etc.). Gerar inserts com `node scripts/gerar_tbl_codigos_from_dicionario.js`. |
 
+**Schemas:** O schema **`app`** tem só a tabela `app.users` (login). As **funções** (`norm_cpf`, `norm_cod_familiar`, etc.) e as **sequências** (`cadu_raw_id_seq`, `sibec_*_id_seq`, etc.) ficam no schema **`public`**, junto com as tabelas de extração e as views. É normal o schema app não listar funções/sequências — elas estão em public.
+
 ---
 
 ## 3. Views e materialized views – lista completa
@@ -95,6 +97,28 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 2. Isso executa em sequência: refresh de `mv_familia_situacao` e `mv_cpf_familia_situacao`, depois refresh das 5 MVs da Folha RF.
 
 Assim as consultas (Agenda Forms, etc.) passam a refletir os dados novos.
+
+---
+
+## 5.1 Restaurar views (quando sumiram ou deram erro)
+
+Se ao clicar em **"Atualizar todas as views"** aparecer erro do tipo `relation "mv_cpf_familia_situacao" does not exist`, ou se as views sumiram do banco, é porque as views/materialized views ainda não foram criadas (ou foram dropadas). O refresh **só atualiza** MVs que já existem; **não cria** nada.
+
+**O que fazer:** rodar no banco `vigilancia` os scripts de **criação** na ordem abaixo (via psql, DBeaver ou outro cliente). Garanta que as tabelas de dados já existam (cadu_raw, sibec_bloqueados, sibec_cancelados, sibec_folha_pagamento, visitas_raw).
+
+1. `create_views_cadu.sql` — funções de normalização + `vw_familias_limpa`, `vw_pessoas_limpa`
+2. `create_view_familia_cpf_visitas.sql` — `mv_familia_situacao`, `mv_cpf_familia_situacao`, `vw_cpf_situacao`, `vw_filtro_controle`
+3. `create_view_folha_rf.sql` — 5 MVs da folha + `vw_folha_rf`
+
+Exemplo com psql (na raiz do repositório):
+
+```bash
+psql -d vigilancia -f create_views_cadu.sql
+psql -d vigilancia -f create_view_familia_cpf_visitas.sql
+psql -d vigilancia -f create_view_folha_rf.sql
+```
+
+Depois disso, **"Atualizar todas as views"** na Manutenção volta a funcionar e a consulta (Agenda Forms) passa a usar `vw_filtro_controle` normalmente.
 
 ---
 
