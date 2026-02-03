@@ -3,9 +3,9 @@ import { query } from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
 
 /**
- * Cria o primeiro usuário admin (uma vez).
- * POST /api/admin/seed com body: { "secret": "SEED_SECRET", "email": "admin@...", "password": "..." }
- * Defina SEED_SECRET no ambiente para proteger este endpoint.
+ * Cria usuário admin ou consult (via SEED_SECRET).
+ * POST /api/admin/seed com body: { "secret": "SEED_SECRET", "email": "...", "password": "...", "role": "admin"|"consult", "name": "..." }
+ * role opcional; padrão "admin".
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.SEED_SECRET;
@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const role = body.role === 'consult' ? 'consult' : 'admin';
+
     const { rows: existing } = await query(
       'SELECT id FROM app.users WHERE email = $1',
       [email]
@@ -42,15 +44,17 @@ export async function POST(request: NextRequest) {
     }
 
     const password_hash = await hashPassword(password);
+    const name = body.name || (role === 'admin' ? 'Administrador' : 'Consulta');
     await query(
       `INSERT INTO app.users (email, password_hash, name, role)
-       VALUES ($1, $2, $3, 'admin')`,
-      [email, password_hash, body.name || 'Administrador']
+       VALUES ($1, $2, $3, $4)`,
+      [email, password_hash, name, role]
     );
 
     return NextResponse.json({
-      message: 'Usuário admin criado.',
+      message: `Usuário ${role === 'admin' ? 'admin' : 'consulta'} criado.`,
       email,
+      role,
     });
   } catch (e) {
     console.error('Seed error:', e);

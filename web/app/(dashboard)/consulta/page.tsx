@@ -232,7 +232,7 @@ export default function ConsultaPage() {
               <tbody>
                 {rows.map((row, i) => (
                   <tr
-                    key={row.id ?? i}
+                    key={row.id != null ? String(row.id) : `row-${i}`}
                     className="border-b border-slate-100 hover:bg-slate-50"
                   >
                     {AGENDA_FORMS_COLUMNS.map(({ key }) => (
