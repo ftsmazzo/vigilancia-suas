@@ -21,8 +21,16 @@ const PESSOA_COLUMNS = new Set([
 ]);
 /** CRAS: múltiplos valores, match exato no nome (d_nom_centro_assist_fam IN (...)). */
 const CRAS_COL = 'd_nom_centro_assist_fam';
-/** Bairro: um valor, ILIKE %valor% (d_nom_unidade_territorial_fam). */
-const BAIRRO_COL = 'd_nom_unidade_territorial_fam';
+/** Bairro: um valor, ILIKE em unidade territorial ou localidade. */
+const BAIRRO_COLS = ['d_nom_unidade_territorial_fam', 'd_nom_localidade_fam'] as const;
+
+/** Prazo de atualização cadastral: dias desde d_dat_atual_fam (dinâmico a partir de hoje). */
+const PRAZO_ATUALIZACAO_DAYS: Record<string, { min?: number; max?: number }> = {
+  ate_12: { max: 365 },
+  '12_24': { min: 365, max: 730 },
+  '24_48': { min: 730, max: 1460 },
+  mais_48: { min: 1460 },
+};
 
 function getMultiValues(searchParams: URLSearchParams, key: string): string[] {
   const raw = searchParams.getAll(key).flatMap((v) => v.split(',').map((s) => s.trim()).filter(Boolean));
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
   const pessoaMulti: { col: string; vals: string[] }[] = [];
   const crasVals = getMultiValues(searchParams, 'cras');
   const bairroVal = searchParams.get('bairro')?.trim() ?? '';
+  const prazoVal = searchParams.get('prazo_atualizacao')?.trim() ?? '';
 
   let paramIndex = 1;
 
@@ -72,9 +81,25 @@ export async function GET(request: NextRequest) {
     famParams.push(...crasVals.map((v) => `%${v}%`));
   }
   if (bairroVal) {
-    famConditions.push(`(f.${BAIRRO_COL} IS NOT NULL AND f.${BAIRRO_COL}::TEXT ILIKE $${paramIndex})`);
-    famParams.push(`%${bairroVal}%`);
+    const bairroPattern = `%${bairroVal}%`;
+    const bairroOr = BAIRRO_COLS.map(
+      (col) => `(f.${col} IS NOT NULL AND f.${col}::TEXT ILIKE $${paramIndex})`
+    ).join(' OR ');
+    famConditions.push(`(${bairroOr})`);
+    famParams.push(bairroPattern);
     paramIndex++;
+  }
+
+  const prazoRange = prazoVal ? PRAZO_ATUALIZACAO_DAYS[prazoVal] : null;
+  if (prazoRange) {
+    const daysExpr = '(CURRENT_DATE - f.d_dat_atual_fam)';
+    famConditions.push(`(f.d_dat_atual_fam IS NOT NULL AND ${daysExpr} >= 0)`);
+    if (prazoRange.max != null) {
+      famConditions.push(`(${daysExpr} <= ${prazoRange.max})`);
+    }
+    if (prazoRange.min != null) {
+      famConditions.push(`(${daysExpr} > ${prazoRange.min})`);
+    }
   }
 
   const pessoaConditions: string[] = [];
@@ -127,10 +152,31 @@ export async function GET(request: NextRequest) {
     const totalFilterParams =
       famParams.length + pessoaParams.length;
 
+    // Sempre retornar lista de bairros do resultado filtrado (mesmo filtros aplicados)
+    const allConditions = [...famConditions, ...pessoaConditions];
+    const allParams = [...famParams, ...pessoaParams];
+    const whereClause = allConditions.length ? `WHERE ${allConditions.join(' AND ')}` : '';
+    const baseFrom = hasPessoaFilters
+      ? `vw_familias_limpa f INNER JOIN vw_pessoas_limpa p ON ${join}`
+      : `vw_familias_limpa f`;
+    const sqlBairros =
+      `SELECT DISTINCT nome FROM (` +
+      `SELECT f.d_nom_unidade_territorial_fam AS nome FROM ${baseFrom} ${whereClause} ` +
+      `UNION SELECT f.d_nom_localidade_fam AS nome FROM ${baseFrom} ${whereClause}` +
+      `) t WHERE nome IS NOT NULL AND TRIM(nome) != '' ORDER BY nome LIMIT 500`;
+    let bairros: string[] = [];
+    try {
+      const resBairros = await query<{ nome: string }>(sqlBairros, allParams);
+      bairros = resBairros.rows.filter((r) => r.nome != null).map((r) => String(r.nome));
+    } catch (_) {
+      bairros = [];
+    }
+
     return NextResponse.json({
       totalFamilias,
       totalPessoas,
       filtros: totalFilterParams,
+      bairros: bairros.length > 0 ? bairros : undefined,
     });
   } catch (e) {
     console.error('Dashboard stats error:', e);

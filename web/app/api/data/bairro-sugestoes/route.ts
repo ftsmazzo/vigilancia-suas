@@ -6,7 +6,7 @@ const MAX = 50;
 
 /**
  * GET /api/data/bairro-sugestoes?q=...
- * Retorna bairros (d_nom_unidade_territorial_fam) que contêm o texto (ILIKE). Para autocomplete.
+ * Retorna bairros que contêm o texto: busca em d_nom_unidade_territorial_fam e d_nom_localidade_fam.
  */
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -19,17 +19,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ bairros: [] });
   }
 
+  const pattern = `%${q}%`;
+
   try {
     const { rows } = await query<{ nome: string }>(
-      `SELECT DISTINCT NULLIF(TRIM(d_nom_unidade_territorial_fam), '') AS nome
-       FROM vw_familias_limpa
-       WHERE d_nom_unidade_territorial_fam IS NOT NULL AND TRIM(d_nom_unidade_territorial_fam) ILIKE $1
+      `SELECT DISTINCT nome FROM (
+         SELECT NULLIF(TRIM(d_nom_unidade_territorial_fam), '') AS nome
+         FROM vw_familias_limpa
+         WHERE d_nom_unidade_territorial_fam IS NOT NULL AND TRIM(d_nom_unidade_territorial_fam) ILIKE $1
+         UNION
+         SELECT NULLIF(TRIM(d_nom_localidade_fam), '') AS nome
+         FROM vw_familias_limpa
+         WHERE d_nom_localidade_fam IS NOT NULL AND TRIM(d_nom_localidade_fam) ILIKE $1
+       ) t
+       WHERE nome IS NOT NULL AND nome != ''
        ORDER BY nome
        LIMIT ${MAX}`,
-      [`%${q}%`]
+      [pattern]
     );
 
-    const bairros = rows.filter((r) => r.nome != null).map((r) => String(r.nome));
+    const bairros = rows.map((r) => String(r.nome));
 
     return NextResponse.json({ bairros });
   } catch (e) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Opcao {
   cod: string;
@@ -17,7 +17,16 @@ interface Stats {
   totalFamilias: number;
   totalPessoas: number;
   filtros: number;
+  bairros?: string[];
 }
+
+const PRAZO_OPCOES = [
+  { value: '', label: 'Qualquer' },
+  { value: 'ate_12', label: 'Até 12 meses' },
+  { value: '12_24', label: 'De 12 a 24 meses' },
+  { value: '24_48', label: 'De 24 a 48 meses' },
+  { value: 'mais_48', label: 'Mais de 48 meses' },
+] as const;
 
 /** Filtros: dicionário = string[] (múltiplos códigos); cras/bairro = string. */
 type FiltrosState = Record<string, string | string[]>;
@@ -47,15 +56,14 @@ function hasAnyFilter(filtros: FiltrosState): boolean {
 export default function NumericoPage() {
   const [campos, setCampos] = useState<CampoDicionario[]>([]);
   const [crasOpcoes, setCrasOpcoes] = useState<{ nome: string; cod: string }[]>([]);
-  const [bairroSugestoes, setBairroSugestoes] = useState<string[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [bairrosNaConsulta, setBairrosNaConsulta] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingCras, setLoadingCras] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [error, setError] = useState('');
   const [filtros, setFiltros] = useState<FiltrosState>({});
   const [bairroInput, setBairroInput] = useState('');
-  const bairroDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadDicionario = useCallback(() => {
     setLoading(true);
@@ -97,15 +105,20 @@ export default function NumericoPage() {
       .then((data) => {
         if (data.error) {
           setStats(null);
+          setBairrosNaConsulta([]);
         } else {
           setStats({
             totalFamilias: data.totalFamilias ?? 0,
             totalPessoas: data.totalPessoas ?? 0,
             filtros: data.filtros ?? 0,
           });
+          setBairrosNaConsulta(data.bairros ?? []);
         }
       })
-      .catch(() => setStats(null))
+      .catch(() => {
+        setStats(null);
+        setBairrosNaConsulta([]);
+      })
       .finally(() => setLoadingStats(false));
   }, [filtros]);
 
@@ -135,20 +148,7 @@ export default function NumericoPage() {
     });
   };
 
-  const handleBairroInput = (value: string) => {
-    setBairroInput(value);
-    if (value.trim().length >= 2) {
-      if (bairroDebounce.current) clearTimeout(bairroDebounce.current);
-      bairroDebounce.current = setTimeout(() => {
-        fetch(`/api/data/bairro-sugestoes?q=${encodeURIComponent(value.trim())}`)
-          .then((r) => r.json())
-          .then((data) => setBairroSugestoes(data.bairros ?? []))
-          .catch(() => setBairroSugestoes([]));
-      }, 300);
-    } else {
-      setBairroSugestoes([]);
-    }
-  };
+  const handleBairroInput = (value: string) => setBairroInput(value);
 
   const applyBairroFilter = () => {
     const v = bairroInput.trim();
@@ -163,7 +163,7 @@ export default function NumericoPage() {
   const clearFilters = () => {
     setFiltros({});
     setBairroInput('');
-    setBairroSugestoes([]);
+    setBairrosNaConsulta([]);
   };
 
   const selectedValues = (nomeCampo: string): string[] => {
@@ -242,25 +242,34 @@ export default function NumericoPage() {
             <input
               id="bairro"
               type="text"
-              list="bairro-list"
               value={bairroInput}
               onChange={(e) => handleBairroInput(e.target.value)}
               onBlur={applyBairroFilter}
               onKeyDown={(e) => e.key === 'Enter' && applyBairroFilter()}
-              placeholder="Digite (ex.: Dut) e pressione Enter ou saia do campo para aplicar"
+              placeholder="Digite (ex.: Dutr) e pressione Enter ou saia do campo para aplicar"
               className="input text-sm py-2 w-full"
             />
-            <datalist id="bairro-list">
-              {bairroSugestoes.map((b) => (
-                <option key={b} value={b} />
+          </div>
+          <div>
+            <label htmlFor="prazo_atualizacao" className="label text-xs">Prazo de atualização cadastral (a partir de hoje)</label>
+            <select
+              id="prazo_atualizacao"
+              value={(filtros.prazo_atualizacao as string) ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFiltros((prev) => {
+                  const out = { ...prev };
+                  if (v) out.prazo_atualizacao = v;
+                  else delete out.prazo_atualizacao;
+                  return out;
+                });
+              }}
+              className="input text-sm py-2 w-full"
+            >
+              {PRAZO_OPCOES.map((o) => (
+                <option key={o.value || 'qualquer'} value={o.value}>{o.label}</option>
               ))}
-            </datalist>
-            {bairroSugestoes.length > 0 && (
-              <p className="text-xs text-slate-500 mt-1.5">
-                Bairros que batem: {bairroSugestoes.slice(0, 10).join(', ')}
-                {bairroSugestoes.length > 10 ? ` (+${bairroSugestoes.length - 10})` : ''}
-              </p>
-            )}
+            </select>
           </div>
         </div>
 
@@ -308,9 +317,24 @@ export default function NumericoPage() {
         </div>
       </section>
 
+      {bairrosNaConsulta.length > 0 && (
+        <section className="card p-6">
+          <h2 className="font-medium text-slate-800 mb-2">Bairros nesta consulta</h2>
+          <p className="text-sm text-slate-600 mb-2">
+            Bairros/unidades territoriais presentes no resultado filtrado ({bairrosNaConsulta.length}
+            {bairrosNaConsulta.length >= 500 ? ' — exibindo até 500' : ''}):
+          </p>
+          <ul className="flex flex-wrap gap-2 text-sm text-slate-700">
+            {bairrosNaConsulta.map((b) => (
+              <li key={b} className="px-2 py-1 rounded bg-slate-100">{b}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {hasFilters && stats && (
         <p className="text-sm text-slate-500">
-          Famílias e pessoas cruzadas por código familiar. Números com filtros aplicados.
+          Famílias e pessoas cruzadas por código familiar. Prazo de atualização calculado a partir de hoje.
         </p>
       )}
     </div>
