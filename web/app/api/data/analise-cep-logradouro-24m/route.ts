@@ -48,6 +48,7 @@ match_por_cep AS (
   GROUP BY f.d_cd_ibge, f.d_cod_familiar_fam
 )
 SELECT
+  (SELECT COUNT(*) FROM vw_familias_limpa) AS total_familias_cadastro,
   (SELECT COUNT(*) FROM fam_24m) AS total_familias_24m,
   (SELECT COUNT(*) FROM fam_com_cep) AS com_cep_preenchido_24m,
   (SELECT COUNT(*) FROM match_por_cep) AS cep_existe_na_geo_24m,
@@ -57,6 +58,7 @@ SELECT
 
   try {
     const { rows } = await query<{
+      total_familias_cadastro: string;
       total_familias_24m: string;
       com_cep_preenchido_24m: string;
       cep_existe_na_geo_24m: string;
@@ -72,6 +74,7 @@ SELECT
     }
 
     return NextResponse.json({
+      total_familias_cadastro: Number(row.total_familias_cadastro),
       total_familias_24m: Number(row.total_familias_24m),
       com_cep_preenchido_24m: Number(row.com_cep_preenchido_24m),
       cep_existe_na_geo_24m: Number(row.cep_existe_na_geo_24m),

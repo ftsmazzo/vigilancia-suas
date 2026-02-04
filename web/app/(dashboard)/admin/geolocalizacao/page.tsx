@@ -17,6 +17,7 @@ export default function GeolocalizacaoPage() {
   const [createMvMsg, setCreateMvMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [analiseLoading, setAnaliseLoading] = useState(false);
   const [analise, setAnalise] = useState<{
+    total_familias_cadastro: number;
     total_familias_24m: number;
     com_cep_preenchido_24m: number;
     cep_existe_na_geo_24m: number;
@@ -193,15 +194,32 @@ export default function GeolocalizacaoPage() {
           <p className="text-sm text-red-600 mb-2">{analiseErr}</p>
         )}
         {analise && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm">
-            <p className="font-medium text-slate-700 mb-2">Resultado (cadastros atualizados nos últimos 24 meses)</p>
-            <ul className="space-y-1 text-slate-600">
-              <li><strong>Total de famílias:</strong> {analise.total_familias_24m.toLocaleString('pt-BR')}</li>
-              <li><strong>Com CEP preenchido:</strong> {analise.com_cep_preenchido_24m.toLocaleString('pt-BR')}</li>
-              <li><strong>CEP existe na Geo (join por CEP):</strong> {analise.cep_existe_na_geo_24m.toLocaleString('pt-BR')}</li>
-              <li><strong>Endereço coincide (CADU = Geo):</strong> {analise.endereco_coincide_24m.toLocaleString('pt-BR')}</li>
-              <li><strong>Endereço divergente (erro / CEP genérico):</strong> <span className="text-amber-700 font-medium">{analise.endereco_divergente_24m.toLocaleString('pt-BR')}</span></li>
-            </ul>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm space-y-4">
+            <div>
+              <p className="font-medium text-slate-700 mb-2">Resultado</p>
+              <ul className="space-y-1 text-slate-600">
+                <li><strong>Total de famílias no cadastro (vw_familias_limpa):</strong> {analise.total_familias_cadastro.toLocaleString('pt-BR')}</li>
+                <li><strong>Com atualização nos últimos 24 meses:</strong> {analise.total_familias_24m.toLocaleString('pt-BR')}</li>
+                <li><strong>Com CEP preenchido (24m):</strong> {analise.com_cep_preenchido_24m.toLocaleString('pt-BR')}</li>
+                <li><strong>CEP existe na Geo (join por CEP):</strong> {analise.cep_existe_na_geo_24m.toLocaleString('pt-BR')}</li>
+                <li><strong>Endereço coincide (CADU = Geo):</strong> {analise.endereco_coincide_24m.toLocaleString('pt-BR')}</li>
+                <li><strong>Endereço divergente (erro / CEP genérico):</strong> <span className="text-amber-700 font-medium">{analise.endereco_divergente_24m.toLocaleString('pt-BR')}</span></li>
+              </ul>
+            </div>
+            <div className="pt-3 border-t border-slate-200">
+              <p className="text-slate-600 mb-2">
+                A correção (match por logradouro) atua nos <strong>candidatos</strong>: CEP na Geo mas sem match CEP+logradouro (em toda a base, não só 24m). Atualize as MVs para aplicar.
+              </p>
+              <button
+                type="button"
+                onClick={runRefreshGeo}
+                disabled={refreshLoading}
+                className="btn-primary disabled:opacity-50"
+              >
+                {refreshLoading ? 'Atualizando… (pode levar 5–15 min)' : 'Atualizar match Geo'}
+              </button>
+              <p className="text-xs text-slate-500 mt-2">A primeira MV (base toda) demora mais; a segunda (só candidatos) é rápida.</p>
+            </div>
           </div>
         )}
       </section>
@@ -224,7 +242,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Atualiza <strong>mv_familias_geo</strong> (match CEP+logradouro; pode demorar) e <strong>mv_familias_geo_por_logradouro</strong> (só candidatos com CEP na Geo sem match — bem mais rápido). Execute após upload de Geo ou CADU.
+          Atualiza <strong>mv_familias_geo</strong> (base toda; pode levar <strong>5–15 min</strong>) e <strong>mv_familias_geo_por_logradouro</strong> (só candidatos — rápido). O mesmo botão aparece acima, dentro do resultado da análise, para ver o escopo antes. Execute após upload de Geo ou CADU.
         </p>
         <button
           type="button"
@@ -232,7 +250,7 @@ export default function GeolocalizacaoPage() {
           disabled={refreshLoading}
           className="btn-primary disabled:opacity-50"
         >
-          {refreshLoading ? 'Atualizando…' : 'Atualizar match Geo'}
+          {refreshLoading ? 'Atualizando… (5–15 min)' : 'Atualizar match Geo'}
         </button>
       </section>
 
