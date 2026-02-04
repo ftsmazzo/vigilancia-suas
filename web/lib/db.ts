@@ -67,7 +67,20 @@ export async function runRefreshStatements(scripts: string[]): Promise<{
         await client.query(trimmed);
         refreshed.push(name);
       } catch (e) {
-        failed.push({ name, error: e instanceof Error ? e.message : String(e) });
+        const errMsg = e instanceof Error ? e.message : String(e);
+        if (
+          name === 'mv_familias_geo' &&
+          (errMsg.includes('unique index') || errMsg.includes('CONCURRENTLY'))
+        ) {
+          try {
+            await client.query('REFRESH MATERIALIZED VIEW mv_familias_geo');
+            refreshed.push(name);
+          } catch (e2) {
+            failed.push({ name, error: errMsg });
+          }
+        } else {
+          failed.push({ name, error: errMsg });
+        }
       }
     }
     return { refreshed, failed, skipped };

@@ -5,6 +5,8 @@
 
 import pool from './db';
 
+let createMvInProgress = false;
+
 const SQL_FUNCTION = `
 CREATE OR REPLACE FUNCTION norm_logradouro_para_match(t TEXT) RETURNS TEXT AS $$
 DECLARE
@@ -63,6 +65,10 @@ INNER JOIN tbl_geo g
 `.trim();
 
 export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (createMvInProgress) {
+    return { ok: false, error: 'Criação já em andamento. Aguarde terminar antes de clicar de novo.' };
+  }
+  createMvInProgress = true;
   const client = await pool.connect();
   try {
     await client.query("SET statement_timeout = '0'");
@@ -87,5 +93,6 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
     return { ok: false, error };
   } finally {
     client.release();
+    createMvInProgress = false;
   }
 }
