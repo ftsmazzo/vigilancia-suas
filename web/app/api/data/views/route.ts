@@ -18,7 +18,7 @@ export async function GET() {
        WHERE table_schema = 'public'
          AND (table_type = 'VIEW' OR table_type = 'BASE TABLE')
          AND table_name IN (
-           'cadu_raw', 'vw_familias_limpa', 'vw_pessoas_limpa',
+           'cadu_raw', 'vw_familias_limpa', 'vw_familias_territorio', 'vw_pessoas_limpa', 'mv_familias_geo',
            'vw_folha_rf', 'vw_filtro_controle', 'vw_cpf_situacao',
            'sibec_folha_pagamento', 'sibec_bloqueados', 'sibec_cancelados',
            'visitas_raw'

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { query } from '@/lib/db';
 
-/** Colunas de família (vw_familias_limpa) permitidas para filtro (múltiplos valores = IN). */
+/** Colunas de família (vw_familias_territorio = todas as famílias com território da Geo quando há match) permitidas para filtro. */
 const FAM_COLUMNS = new Set([
   'd_fx_rfpc',
   'd_cod_local_domic_fam',
@@ -106,14 +106,14 @@ export async function GET(request: NextRequest) {
       const whereClause = `WHERE ${allConditions.join(' AND ')}`;
       const sqlFam =
         `SELECT COUNT(*) AS c FROM (` +
-        `SELECT DISTINCT f.d_cd_ibge, f.d_cod_familiar_fam FROM vw_familias_limpa f ` +
+        `SELECT DISTINCT f.d_cd_ibge, f.d_cod_familiar_fam FROM vw_familias_territorio f ` +
         `INNER JOIN vw_pessoas_limpa p ON ${join} ${whereClause}` +
         `) t`;
       const resFam = await query<{ c: string }>(sqlFam, allParams);
       totalFamilias = parseInt(resFam.rows[0]?.c ?? '0', 10);
     } else {
       const whereFam = hasFamFilters ? `WHERE ${famConditions.join(' AND ')}` : '';
-      const sqlFam = `SELECT COUNT(*) AS c FROM vw_familias_limpa f ${whereFam}`;
+      const sqlFam = `SELECT COUNT(*) AS c FROM vw_familias_territorio f ${whereFam}`;
       const resFam = await query<{ c: string }>(sqlFam, famParams);
       totalFamilias = parseInt(resFam.rows[0]?.c ?? '0', 10);
     }
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       const whereClause = allConditions.length ? `WHERE ${allConditions.join(' AND ')}` : '';
       const sqlPessoa =
         `SELECT COUNT(*) AS c FROM vw_pessoas_limpa p ` +
-        `INNER JOIN vw_familias_limpa f ON ${join} ${whereClause}`;
+        `INNER JOIN vw_familias_territorio f ON ${join} ${whereClause}`;
       const resPessoa = await query<{ c: string }>(sqlPessoa, allParams);
       totalPessoas = parseInt(resPessoa.rows[0]?.c ?? '0', 10);
     } else {

@@ -89,8 +89,9 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 |--------|------|--------|-------------------|
 | `norm_logradouro_para_match(t)` | FUNÇÃO | `create_geo_match.sql` | Não |
 | `mv_familias_geo` | MATERIALIZED VIEW | `create_geo_match.sql` | **Sim** |
+| `vw_familias_territorio` | VIEW | `create_geo_match.sql` | Não (lê da MV) |
 
-**Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel (Geolocalização ou Manutenção) após cada upload de Geo ou CADU. Geo = fonte da verdade (1) — famílias (N); sempre usar bairro_geo/cras_geo para território.
+**Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel após cada upload de Geo ou CADU. **vw_familias_territorio** = todas as famílias com território corrigido da Geo quando há match; use esta view no sistema (dashboard, bairro, CRAS, consultas). Nenhuma família fica fora do cruzamento.
 
 **Refresh:** `refresh_geo.sql` ou painel → ação **geo** → `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo`.
 

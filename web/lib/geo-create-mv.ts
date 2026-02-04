@@ -86,8 +86,23 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
       'CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod_familiar_fam)'
     );
     await client.query(
-      "COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Cruzamento: famílias/pessoas por código familiar com mv_familias_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.'"
+      "COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.'"
     );
+    await client.query('DROP VIEW IF EXISTS vw_familias_territorio CASCADE');
+    await client.query(`
+      CREATE VIEW vw_familias_territorio AS
+      SELECT
+        f.*,
+        g.cep_geo AS cep_territorio,
+        g.endereco_geo AS endereco_territorio,
+        g.bairro_geo AS bairro_territorio,
+        g.cras_geo AS cras_territorio,
+        g.creas_geo AS creas_territorio,
+        g.lat_geo AS lat_territorio,
+        g.long_geo AS long_territorio
+      FROM vw_familias_limpa f
+      LEFT JOIN mv_familias_geo g ON g.d_cd_ibge = f.d_cd_ibge AND g.d_cod_familiar_fam = f.d_cod_familiar_fam
+    `);
     return { ok: true };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);

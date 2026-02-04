@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 
 /**
  * GET /api/data/cras-opcoes
- * Retorna CRAS 1, CRAS 2, CRAS 3, etc. Se a extração por regex vier vazia, fallback: todos os centros que contêm CRAS e não CREAS.
+ * Retorna CRAS: prioriza cras_territorio (Geo), depois extrai de d_nom_centro_assist_fam.
  */
 export async function GET() {
   const user = await getSession();
@@ -15,22 +15,30 @@ export async function GET() {
   try {
     let rows: { nome: string }[] = [];
 
-    const { rows: rowsStrict } = await query<{ nome: string }>(
-      `SELECT DISTINCT
-         regexp_replace(trim((regexp_matches(d_nom_centro_assist_fam, 'CRAS\s*\d+', 'i'))[1]), '\s+', ' ', 'g') AS nome
-       FROM vw_familias_limpa
-       WHERE d_nom_centro_assist_fam IS NOT NULL
-         AND trim(d_nom_centro_assist_fam) ~* 'CRAS\s*\d+'
-         AND trim(d_nom_centro_assist_fam) !~* 'CREAS'
+    const { rows: rowsGeo } = await query<{ nome: string }>(
+      `SELECT DISTINCT NULLIF(TRIM(cras_territorio::TEXT), '') AS nome
+       FROM vw_familias_territorio
+       WHERE cras_territorio IS NOT NULL
        ORDER BY nome`
     );
+    rows = rowsGeo.filter((r) => r.nome != null && String(r.nome).trim() !== '');
 
-    rows = rowsStrict.filter((r) => r.nome != null && String(r.nome).trim() !== '');
-
+    if (rows.length === 0) {
+      const { rows: rowsStrict } = await query<{ nome: string }>(
+        `SELECT DISTINCT
+           regexp_replace(trim((regexp_matches(d_nom_centro_assist_fam, 'CRAS\s*\d+', 'i'))[1]), '\s+', ' ', 'g') AS nome
+         FROM vw_familias_territorio
+         WHERE d_nom_centro_assist_fam IS NOT NULL
+           AND trim(d_nom_centro_assist_fam) ~* 'CRAS\s*\d+'
+           AND trim(d_nom_centro_assist_fam) !~* 'CREAS'
+         ORDER BY nome`
+      );
+      rows = rowsStrict.filter((r) => r.nome != null && String(r.nome).trim() !== '');
+    }
     if (rows.length === 0) {
       const { rows: rowsFallback } = await query<{ nome: string }>(
         `SELECT DISTINCT NULLIF(trim(d_nom_centro_assist_fam), '') AS nome
-         FROM vw_familias_limpa
+         FROM vw_familias_territorio
          WHERE d_nom_centro_assist_fam IS NOT NULL
            AND trim(d_nom_centro_assist_fam) ILIKE '%CRAS%'
            AND trim(d_nom_centro_assist_fam) NOT ILIKE '%CREAS%'

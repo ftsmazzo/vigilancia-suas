@@ -207,13 +207,13 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Cruzamento e territorialização</h2>
         <p className="text-sm text-slate-500 mb-2">
-          <strong>mv_familias_geo</strong> = famílias do CADU que deram match na Geo (CEP + logradouro). Só entra endereço que existe na Geo — CEP central/divergente fica de fora. Traz da Geo: <strong>cep_geo</strong>, <strong>endereco_geo</strong>, <strong>bairro_geo</strong>, <strong>cras_geo</strong>, <strong>creas_geo</strong>, <strong>lat_geo</strong>, <strong>long_geo</strong>.
+          Depois da criação/atualização da Geo, o sistema reconstrói as famílias em <strong>vw_familias_territorio</strong>: <strong>todas</strong> as famílias do CADU, com CEP/endereço/bairro/CRAS/CREAS/lat/long <strong>corretos da Geo</strong> quando há match; quando não há match mantém dados do CADU e NULL em território. Nenhuma família fica fora do cruzamento.
         </p>
         <p className="text-sm text-slate-500 mb-2">
-          Cruzamento: <strong>famílias</strong> (vw_familias_limpa) e <strong>pessoas</strong> (vw_pessoas_limpa) se ligam por <strong>código familiar</strong>. Para ter território (CRAS, bairro, lat/long), faça JOIN por código familiar com <strong>mv_familias_geo</strong>. Nada de view extra — só essa MV.
+          Dashboard numérico, bairro, CRAS e consultas usam <strong>vw_familias_territorio</strong>. Não é preciso fazer JOIN — a aplicação já usa essa view.
         </p>
         <p className="text-sm text-slate-500">
-          Conforme tbl_geo for atualizada (Via CEP ou outras fontes com endereços novos do município), rode &quot;Atualizar match Geo&quot; para agregar mais famílias à mv_familias_geo até estar tudo relacionado.
+          Conforme tbl_geo for atualizada (Via CEP ou outras fontes), rode &quot;Atualizar match Geo&quot; para repopular mv_familias_geo; vw_familias_territorio passa a refletir os dados atualizados.
         </p>
       </section>
 

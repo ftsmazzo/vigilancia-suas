@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 
 const MAX_ROWS = 500;
 const ALLOWED_TABLES = new Set([
-  'cadu_raw', 'vw_familias_limpa', 'vw_pessoas_limpa', 'vw_folha_rf',
+  'cadu_raw', 'vw_familias_limpa', 'vw_familias_territorio', 'vw_pessoas_limpa', 'vw_folha_rf', 'mv_familias_geo',
   'vw_filtro_controle', 'vw_cpf_situacao', 'sibec_folha_pagamento',
   'sibec_bloqueados', 'sibec_cancelados', 'visitas_raw',
 ]);

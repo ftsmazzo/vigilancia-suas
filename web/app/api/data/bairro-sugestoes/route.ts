@@ -6,7 +6,7 @@ const MAX = 50;
 
 /**
  * GET /api/data/bairro-sugestoes?q=...
- * Retorna bairros que contêm o texto: busca em d_nom_unidade_territorial_fam e d_nom_localidade_fam.
+ * Retorna bairros que contêm o texto: prioriza bairro_territorio (Geo), depois d_nom_unidade_territorial_fam e d_nom_localidade_fam.
  */
 export async function GET(request: NextRequest) {
   const user = await getSession();
@@ -24,12 +24,16 @@ export async function GET(request: NextRequest) {
   try {
     const { rows } = await query<{ nome: string }>(
       `SELECT DISTINCT nome FROM (
+         SELECT NULLIF(TRIM(bairro_territorio), '') AS nome
+         FROM vw_familias_territorio
+         WHERE bairro_territorio IS NOT NULL AND TRIM(bairro_territorio) ILIKE $1
+         UNION
          SELECT NULLIF(TRIM(d_nom_unidade_territorial_fam), '') AS nome
-         FROM vw_familias_limpa
+         FROM vw_familias_territorio
          WHERE d_nom_unidade_territorial_fam IS NOT NULL AND TRIM(d_nom_unidade_territorial_fam) ILIKE $1
          UNION
          SELECT NULLIF(TRIM(d_nom_localidade_fam), '') AS nome
-         FROM vw_familias_limpa
+         FROM vw_familias_territorio
          WHERE d_nom_localidade_fam IS NOT NULL AND TRIM(d_nom_localidade_fam) ILIKE $1
        ) t
        WHERE nome IS NOT NULL AND nome != ''
