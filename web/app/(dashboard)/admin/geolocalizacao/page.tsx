@@ -224,7 +224,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Atualiza <strong>mv_familias_geo</strong> (match CEP+logradouro) e <strong>mv_familias_geo_por_logradouro</strong> (match só por endereço). Execute após upload de Geo ou CADU. Pode demorar vários minutos — não feche a página.
+          Atualiza <strong>mv_familias_geo</strong> (match CEP+logradouro; pode demorar) e <strong>mv_familias_geo_por_logradouro</strong> (só candidatos com CEP na Geo sem match — bem mais rápido). Execute após upload de Geo ou CADU.
         </p>
         <button
           type="button"
@@ -265,7 +265,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Cruzamento e territorialização</h2>
         <p className="text-sm text-slate-500 mb-2">
-          O sistema usa <strong>vw_familias_territorio</strong>: <strong>todas</strong> as famílias do CADU. Território (CEP/endereço/bairro/CRAS/CREAS/lat/long) vem da Geo em dois passos: (1) match <strong>CEP + logradouro</strong> (<code>mv_familias_geo</code>); (2) se não houver, match <strong>só por logradouro</strong> (<code>mv_familias_geo_por_logradouro</code>) — assim o endereço do CADU busca o CEP correto na Geo e &quot;corrige&quot; CEP genérico <strong>sem alterar o cadastro</strong> e sem Via CEP.
+          O sistema usa <strong>vw_familias_territorio</strong>: <strong>todas</strong> as famílias do CADU. Território (CEP/endereço/bairro/CRAS/CREAS/lat/long) vem da Geo em dois passos: (1) match <strong>CEP + logradouro</strong> (<code>mv_familias_geo</code>); (2) se não houver, match <strong>só por logradouro</strong> nos <strong>candidatos</strong> (CEP na Geo mas sem match CEP+logradouro, ~5k famílias) — assim o tempo de processamento cai e o CEP da Geo corrige CEP genérico sem alterar cadastro e sem Via CEP.
         </p>
         <p className="text-sm text-slate-500 mb-2">
           Dashboard, bairro, CRAS e consultas usam <strong>vw_familias_territorio</strong>. Não é preciso fazer JOIN.

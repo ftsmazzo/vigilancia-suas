@@ -87,13 +87,28 @@ CREATE INDEX IF NOT EXISTS idx_tbl_geo_logradouro_match
   ON tbl_geo (norm_logradouro_para_match(endereco))
   WHERE endereco IS NOT NULL;
 
--- Materialized view: famílias que NÃO entraram em mv_familias_geo mas cujo endereço (logradouro)
--- coincide com algum da Geo. Usamos o CEP da Geo para "corrigir" sem alterar cadastro.
+-- Materialized view: só as famílias "erro" (CEP existe na Geo mas não deu match CEP+logradouro).
+-- Fazemos o match por logradouro APENAS nesse conjunto, para reduzir tempo (não na base toda).
 DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo_por_logradouro CASCADE;
 CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
-SELECT DISTINCT ON (f.d_cd_ibge, f.d_cod_familiar_fam)
-  f.d_cd_ibge,
-  f.d_cod_familiar_fam,
+WITH candidatos AS (
+  SELECT f.d_cd_ibge, f.d_cod_familiar_fam,
+    f.d_nom_tip_logradouro_fam, f.d_nom_titulo_logradouro_fam, f.d_nom_logradouro_fam
+  FROM vw_familias_limpa f
+  WHERE f.d_num_cep_logradouro_fam IS NOT NULL
+    AND EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
+    AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam)
+    AND norm_logradouro_para_match(
+          CONCAT_WS(' ',
+            NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
+            NULLIF(TRIM(COALESCE(f.d_nom_titulo_logradouro_fam, '')), ''),
+            NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
+          )
+        ) IS NOT NULL
+)
+SELECT DISTINCT ON (c.d_cd_ibge, c.d_cod_familiar_fam)
+  c.d_cd_ibge,
+  c.d_cod_familiar_fam,
   g.cep                AS cep_geo,
   g.endereco           AS endereco_geo,
   g.bairro             AS bairro_geo,
@@ -101,32 +116,21 @@ SELECT DISTINCT ON (f.d_cd_ibge, f.d_cod_familiar_fam)
   g.creas              AS creas_geo,
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo
-FROM vw_familias_limpa f
+FROM candidatos c
 INNER JOIN tbl_geo g
   ON norm_logradouro_para_match(
         CONCAT_WS(' ',
-          NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
-          NULLIF(TRIM(COALESCE(f.d_nom_titulo_logradouro_fam, '')), ''),
-          NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
+          NULLIF(TRIM(COALESCE(c.d_nom_tip_logradouro_fam, '')), ''),
+          NULLIF(TRIM(COALESCE(c.d_nom_titulo_logradouro_fam, '')), ''),
+          NULLIF(TRIM(COALESCE(c.d_nom_logradouro_fam, '')), '')
         )
       ) = norm_logradouro_para_match(g.endereco)
   AND g.endereco IS NOT NULL
-WHERE NOT EXISTS (
-  SELECT 1 FROM mv_familias_geo m
-  WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam
-)
-AND norm_logradouro_para_match(
-  CONCAT_WS(' ',
-    NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
-    NULLIF(TRIM(COALESCE(f.d_nom_titulo_logradouro_fam, '')), ''),
-    NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
-  )
-) IS NOT NULL
-ORDER BY f.d_cd_ibge, f.d_cod_familiar_fam, g.cep;
+ORDER BY c.d_cd_ibge, c.d_cod_familiar_fam, g.cep;
 
 CREATE UNIQUE INDEX idx_mv_familias_geo_logradouro_fam ON mv_familias_geo_por_logradouro (d_cd_ibge, d_cod_familiar_fam);
 
-COMMENT ON MATERIALIZED VIEW mv_familias_geo_por_logradouro IS 'Famílias CADU que não deram match CEP+logradouro mas o endereço bate na Geo. CEP/endereço/bairro/CRAS/CREAS/lat/long vêm da Geo (corrige CEP genérico sem alterar cadastro).';
+COMMENT ON MATERIALIZED VIEW mv_familias_geo_por_logradouro IS 'Só candidatos (CEP na Geo, sem match CEP+logradouro): match por logradouro. Corrige CEP genérico sem alterar cadastro; execução rápida.';
 
 -- View: TODAS as famílias. Território = primeiro match CEP+logradouro (mv_familias_geo), senão match só por logradouro (mv_familias_geo_por_logradouro).
 -- Assim o CEP da Geo passa a valer quando o endereço do CADU coincide, sem Via CEP e sem alterar cadu_raw.

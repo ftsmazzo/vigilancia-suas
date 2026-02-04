@@ -7,7 +7,7 @@ CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod
 CREATE UNIQUE INDEX idx_mv_familias_geo_logradouro_fam ON mv_familias_geo_por_logradouro (d_cd_ibge, d_cod_familiar_fam);
 
 COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.';
-COMMENT ON MATERIALIZED VIEW mv_familias_geo_por_logradouro IS 'Famílias CADU que não deram match CEP+logradouro mas o endereço bate na Geo. CEP/território da Geo (corrige CEP genérico sem alterar cadastro).';
+COMMENT ON MATERIALIZED VIEW mv_familias_geo_por_logradouro IS 'Só candidatos (CEP na Geo, sem match CEP+logradouro): match por logradouro. Corrige CEP genérico; execução rápida.';
 
 DROP VIEW IF EXISTS vw_familias_territorio CASCADE;
 CREATE VIEW vw_familias_territorio AS
