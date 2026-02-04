@@ -188,7 +188,7 @@ export default function AdminPage() {
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          &quot;Atualizar todas as views&quot; roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, 5 MVs da Folha RF e mv_familias_geo. Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
+          &quot;Atualizar todas as views&quot; roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, 5 MVs da Folha RF e as duas MVs Geo (mv_familias_geo, mv_familias_geo_por_logradouro). Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
         </p>
       </section>
 

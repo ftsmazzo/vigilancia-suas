@@ -18,6 +18,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_folha_familias;
 
 export const REFRESH_GEO = `
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo_por_logradouro;
 `.trim();
 
 export type RefreshAction = 'familia_cpf_visitas' | 'folha_rf' | 'geo' | 'todas';

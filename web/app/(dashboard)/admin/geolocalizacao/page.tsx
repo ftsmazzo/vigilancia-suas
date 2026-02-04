@@ -222,9 +222,9 @@ export default function GeolocalizacaoPage() {
       </section>
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo (mv_familias_geo)</h2>
+        <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Geo é a fonte da verdade (1) — famílias (N). O match CEP + logradouro normalizado fica na <strong>materialized view mv_familias_geo</strong>. Execute este refresh após atualizar tbl_geo (upload) ou cadu_raw (upload CADU) para repopular os dados de território. Pode demorar vários minutos — não feche a página.
+          Atualiza <strong>mv_familias_geo</strong> (match CEP+logradouro) e <strong>mv_familias_geo_por_logradouro</strong> (match só por endereço). Execute após upload de Geo ou CADU. Pode demorar vários minutos — não feche a página.
         </p>
         <button
           type="button"
@@ -265,13 +265,13 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Cruzamento e territorialização</h2>
         <p className="text-sm text-slate-500 mb-2">
-          Depois da criação/atualização da Geo, o sistema reconstrói as famílias em <strong>vw_familias_territorio</strong>: <strong>todas</strong> as famílias do CADU, com CEP/endereço/bairro/CRAS/CREAS/lat/long <strong>corretos da Geo</strong> quando há match; quando não há match mantém dados do CADU e NULL em território. Nenhuma família fica fora do cruzamento.
+          O sistema usa <strong>vw_familias_territorio</strong>: <strong>todas</strong> as famílias do CADU. Território (CEP/endereço/bairro/CRAS/CREAS/lat/long) vem da Geo em dois passos: (1) match <strong>CEP + logradouro</strong> (<code>mv_familias_geo</code>); (2) se não houver, match <strong>só por logradouro</strong> (<code>mv_familias_geo_por_logradouro</code>) — assim o endereço do CADU busca o CEP correto na Geo e &quot;corrige&quot; CEP genérico <strong>sem alterar o cadastro</strong> e sem Via CEP.
         </p>
         <p className="text-sm text-slate-500 mb-2">
-          Dashboard numérico, bairro, CRAS e consultas usam <strong>vw_familias_territorio</strong>. Não é preciso fazer JOIN — a aplicação já usa essa view.
+          Dashboard, bairro, CRAS e consultas usam <strong>vw_familias_territorio</strong>. Não é preciso fazer JOIN.
         </p>
         <p className="text-sm text-slate-500">
-          Conforme tbl_geo for atualizada (Via CEP ou outras fontes), rode &quot;Atualizar match Geo&quot; para repopular mv_familias_geo; vw_familias_territorio passa a refletir os dados atualizados.
+          Após upload de Geo ou CADU, use &quot;Atualizar match Geo&quot; para repopular as duas MVs; a view reflete os dados atualizados.
         </p>
       </section>
 

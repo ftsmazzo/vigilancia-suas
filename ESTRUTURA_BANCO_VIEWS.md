@@ -89,11 +89,12 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 |--------|------|--------|-------------------|
 | `norm_logradouro_para_match(t)` | FUNÇÃO | `create_geo_match.sql` | Não |
 | `mv_familias_geo` | MATERIALIZED VIEW | `create_geo_match.sql` | **Sim** |
-| `vw_familias_territorio` | VIEW | `create_geo_match.sql` | Não (lê da MV) |
+| `mv_familias_geo_por_logradouro` | MATERIALIZED VIEW | `create_geo_match.sql` | **Sim** |
+| `vw_familias_territorio` | VIEW | `create_geo_match.sql` | Não (lê das MVs) |
 
-**Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel após cada upload de Geo ou CADU. **vw_familias_territorio** = todas as famílias com território corrigido da Geo quando há match; use esta view no sistema (dashboard, bairro, CRAS, consultas). Nenhuma família fica fora do cruzamento.
+**Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel após cada upload de Geo ou CADU. **vw_familias_territorio** = todas as famílias: primeiro match CEP+logradouro (mv_familias_geo), senão match só por logradouro (mv_familias_geo_por_logradouro) — assim o CEP da Geo corrige “CEP genérico” sem alterar cadastro e sem Via CEP. Use esta view no sistema (dashboard, bairro, CRAS, consultas). Nenhuma família fica fora do cruzamento.
 
-**Refresh:** `refresh_geo.sql` ou painel → ação **geo** → `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo`.
+**Refresh:** painel → ação **geo** → `REFRESH CONCURRENTLY mv_familias_geo` e `REFRESH CONCURRENTLY mv_familias_geo_por_logradouro`.
 
 **Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf) são atualizadas automaticamente. As **materialized views** (mv_*) precisam de refresh após nova carga.
 
@@ -119,7 +120,7 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 **Materialized views** (mv_*): precisam ser **repopuladas** após cada carga de CADU ou SIBEC (e, se usar Geo, após carga de Geo). Na aplicação web (Manutenção ou Geolocalização):
 
 1. Depois de fazer upload de **CADU**, **Bloqueados**, **Cancelados** ou **Folha de Pagamento**, clique em **"Atualizar todas as views"**.
-2. Isso executa em sequência: refresh de `mv_familia_situacao` e `mv_cpf_familia_situacao`, depois refresh das 5 MVs da Folha RF e, por fim, **refresh de `mv_familias_geo`** (match Geo).
+2. Isso executa em sequência: refresh de `mv_familia_situacao` e `mv_cpf_familia_situacao`, depois refresh das 5 MVs da Folha RF e, por fim, **refresh de `mv_familias_geo` e `mv_familias_geo_por_logradouro`** (match Geo).
 3. Se você **só** atualizou a base Geo (upload na página Geolocalização), pode clicar em **"Atualizar match Geo"** (só essa MV) na mesma página — ou usar **"Atualizar todas as views"** para manter tudo em dia.
 
 **Por que usar materialized view para Geo?** O match entre CADU e Geo (CEP + logradouro normalizado) é um join pesado. Se fosse uma view normal, cada consulta recalcularia esse join e o servidor poderia ir a 100% de CPU. Com **mv_familias_geo**, o resultado fica armazenado e a consulta é rápida; o custo do join acontece só quando você roda o refresh no painel (após atualizar CADU ou Geo).

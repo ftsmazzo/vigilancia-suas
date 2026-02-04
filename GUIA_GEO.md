@@ -73,7 +73,9 @@ O script faz um join pesado; em bases grandes pode dar **timeout**. Faça assim:
 Isso cria:
 
 - **norm_logradouro_para_match(t)** – normaliza endereço para comparação.
-- **mv_familias_geo** – materialized view: famílias do CADU que deram match com a Geo (CEP + logradouro normalizado). **Sempre use esta MV nas consultas** — não use view que recalcula o join a cada query (isso sobrecarrega o servidor). Refresh no painel após atualizar Geo ou CADU.
+- **mv_familias_geo** – famílias que deram match **CEP + logradouro** com a Geo.
+- **mv_familias_geo_por_logradouro** – famílias que *não* entraram na anterior mas cujo **endereço** bate na Geo (o CEP da Geo “corrige” CEP genérico, sem alterar cadastro).
+- **vw_familias_territorio** – use esta view no sistema: território = primeiro da mv_familias_geo, senão da mv_familias_geo_por_logradouro. Refresh no painel após atualizar Geo ou CADU (as duas MVs).
 
 ---
 
@@ -133,7 +135,7 @@ LIMIT 20;
 | 2 | Tabela Geo | PGAdmin: **create_tbl_geo.sql** → Query Tool → Executar |
 | 3 | Carga Geo | **Recomendado:** Manutenção da aplicação → upload **Geo** → enviar geo.csv. **Ou** staging/load_geo no PGAdmin (ver texto acima). |
 | 4 | Match Geo | PGAdmin: aumentar timeout (Preferences → Query Tool). Executar **create_geo_match_step1.sql**, aguardar; depois **create_geo_match_step2.sql**. Ou **create_geo_match.sql** inteiro. |
-| 5 | Conferir | PGAdmin: SELECT em mv_familias_geo. Depois: use &quot;Atualizar match Geo&quot; no painel (Geolocalização ou Manutenção) após cada upload de Geo ou CADU. |
+| 5 | Conferir | PGAdmin: SELECT em mv_familias_geo e mv_familias_geo_por_logradouro. Depois: use &quot;Atualizar match Geo&quot; no painel (Geolocalização ou Manutenção) após cada upload de Geo ou CADU. |
 
 Os arquivos **.sql** e o **geo.csv** você pode ter em cópia local (por exemplo, clonando o repositório no seu PC ou baixando só esses arquivos). Nada disso precisa rodar dentro do EasyPanel.
 

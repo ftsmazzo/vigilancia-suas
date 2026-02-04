@@ -34,6 +34,12 @@ CREATE INDEX IF NOT EXISTS idx_tbl_geo_cep_logradouro_match
   ON tbl_geo (cep_norm, norm_logradouro_para_match(endereco))
   WHERE cep_norm IS NOT NULL;
 
+-- Índice para match só por logradouro (buscar CEP na Geo pelo endereço do CADU).
+CREATE INDEX IF NOT EXISTS idx_tbl_geo_logradouro_match
+  ON tbl_geo (norm_logradouro_para_match(endereco))
+  WHERE endereco IS NOT NULL;
+
+DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo_por_logradouro CASCADE;
 DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo CASCADE;
 DROP VIEW IF EXISTS vw_familias_geo CASCADE;
 
@@ -72,3 +78,38 @@ INNER JOIN tbl_geo g
           NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
         )
       ) = norm_logradouro_para_match(g.endereco);
+
+-- Segunda MV: famílias que não bateram CEP+logradouro mas o endereço bate na Geo (corrige CEP genérico).
+CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
+SELECT DISTINCT ON (f.d_cd_ibge, f.d_cod_familiar_fam)
+  f.d_cd_ibge,
+  f.d_cod_familiar_fam,
+  g.cep                AS cep_geo,
+  g.endereco           AS endereco_geo,
+  g.bairro             AS bairro_geo,
+  g.cras               AS cras_geo,
+  g.creas              AS creas_geo,
+  g.lat_num            AS lat_geo,
+  g.long_num           AS long_geo
+FROM vw_familias_limpa f
+INNER JOIN tbl_geo g
+  ON norm_logradouro_para_match(
+        CONCAT_WS(' ',
+          NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
+          NULLIF(TRIM(COALESCE(f.d_nom_titulo_logradouro_fam, '')), ''),
+          NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
+        )
+      ) = norm_logradouro_para_match(g.endereco)
+  AND g.endereco IS NOT NULL
+WHERE NOT EXISTS (
+  SELECT 1 FROM mv_familias_geo m
+  WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam
+)
+AND norm_logradouro_para_match(
+  CONCAT_WS(' ',
+    NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
+    NULLIF(TRIM(COALESCE(f.d_nom_titulo_logradouro_fam, '')), ''),
+    NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
+  )
+) IS NOT NULL
+ORDER BY f.d_cd_ibge, f.d_cod_familiar_fam, g.cep;
