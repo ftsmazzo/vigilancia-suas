@@ -59,19 +59,27 @@ export default function GeolocalizacaoPage() {
     setRefreshMsg(null);
     setRefreshLoading(true);
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1800000);
       const res = await fetch('/api/admin/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'geo' }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setRefreshMsg({ type: 'err', text: data.error || 'Falha ao atualizar.' });
         return;
       }
       setRefreshMsg({ type: 'ok', text: data.message || 'Match Geo atualizado.' });
-    } catch {
-      setRefreshMsg({ type: 'err', text: 'Erro de conexão.' });
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.name === 'AbortError'
+          ? 'Tempo esgotado (30 min). Tente novamente.'
+          : 'Erro de conexão.';
+      setRefreshMsg({ type: 'err', text: msg });
     } finally {
       setRefreshLoading(false);
     }
@@ -158,7 +166,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo (mv_familias_geo)</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Geo é a fonte da verdade (1) — famílias (N). O match CEP + logradouro normalizado fica na <strong>materialized view mv_familias_geo</strong>. Execute este refresh após atualizar tbl_geo (upload) ou cadu_raw (upload CADU) para repopular os dados de território.
+          Geo é a fonte da verdade (1) — famílias (N). O match CEP + logradouro normalizado fica na <strong>materialized view mv_familias_geo</strong>. Execute este refresh após atualizar tbl_geo (upload) ou cadu_raw (upload CADU) para repopular os dados de território. Pode demorar vários minutos — não feche a página.
         </p>
         <button
           type="button"
