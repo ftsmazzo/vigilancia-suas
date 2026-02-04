@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession, requireAdmin } from '@/lib/auth';
 import { runCreateGeoMv } from '@/lib/geo-create-mv';
 
-export const maxDuration = 600;
+export const maxDuration = 1800;
 
 export async function POST() {
   const user = await getSession();

@@ -82,7 +82,7 @@ export default function GeolocalizacaoPage() {
     setCreateMvLoading(true);
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 600000);
+      const timeout = setTimeout(() => controller.abort(), 1800000);
       const res = await fetch('/api/admin/geo/create-mv', {
         method: 'POST',
         signal: controller.signal,
@@ -95,7 +95,10 @@ export default function GeolocalizacaoPage() {
       }
       setCreateMvMsg({ type: 'ok', text: data.message || 'mv_familias_geo criada com sucesso.' });
     } catch (e) {
-      const msg = e instanceof Error && e.name === 'AbortError' ? 'Tempo esgotado. Tente novamente ou use psql (ver GUIA_GEO.md).' : 'Erro de conexão.';
+      const msg =
+        e instanceof Error && e.name === 'AbortError'
+          ? 'Tempo esgotado (30 min). Verifique no Postgres se mv_familias_geo já foi criada — o servidor pode ter terminado depois. Se existir, use "Atualizar match Geo". Senão, tente de novo ou use psql (GUIA_GEO.md).'
+          : 'Erro de conexão.';
       setCreateMvMsg({ type: 'err', text: msg });
     } finally {
       setCreateMvLoading(false);
@@ -140,7 +143,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Criar ou recriar mv_familias_geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero (ex.: após timeout no PGAdmin). Pode demorar vários minutos — não feche a página.
+          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero. Pode demorar vários minutos (até 30 min) — não feche a página. Se aparecer &quot;Tempo esgotado&quot;, confira no Postgres se a MV já existe (o servidor pode ter terminado depois).
         </p>
         <button
           type="button"

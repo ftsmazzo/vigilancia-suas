@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const statements = getRefreshSql(action as RefreshAction);
-    const { refreshed, failed } = await runRefreshStatements(statements);
+    const { refreshed, failed, skipped } = await runRefreshStatements(statements);
 
     let message =
       action === 'todas'
@@ -34,8 +34,11 @@ export async function POST(request: NextRequest) {
           ? 'Refresh executado: match Geo (mv_familias_geo).'
           : `Refresh executado: ${action}.`;
     if (refreshed.length) message += ` Atualizadas: ${refreshed.join(', ')}.`;
+    if (skipped.length) {
+      message += ` Ignoradas (não existem ainda): ${skipped.join(', ')}. Use "Criar/recriar mv_familias_geo" na página Geolocalização.`;
+    }
     if (failed.length) {
-      message += ` Não existem ou falharam: ${failed.map((f) => f.name).join(', ')}. Rode os scripts de criação das views (ver ESTRUTURA_BANCO_VIEWS.md → Restaurar views).`;
+      message += ` Falharam: ${failed.map((f) => f.name).join(', ')}. Ver ESTRUTURA_BANCO_VIEWS.md → Restaurar views.`;
     }
 
     return NextResponse.json({
@@ -43,6 +46,7 @@ export async function POST(request: NextRequest) {
       action,
       message,
       refreshed,
+      skipped: skipped.length ? skipped : undefined,
       failed: failed.length ? failed : undefined,
     });
   } catch (e) {
