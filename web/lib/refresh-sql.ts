@@ -16,7 +16,11 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_folha_canc;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_folha_familias;
 `.trim();
 
-export type RefreshAction = 'familia_cpf_visitas' | 'folha_rf' | 'todas';
+export const REFRESH_GEO = `
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo;
+`.trim();
+
+export type RefreshAction = 'familia_cpf_visitas' | 'folha_rf' | 'geo' | 'todas';
 
 export function getRefreshSql(action: RefreshAction): string[] {
   switch (action) {
@@ -24,10 +28,13 @@ export function getRefreshSql(action: RefreshAction): string[] {
       return REFRESH_FAMILIA_CPF_VISITAS.split(';').map((s) => s.trim()).filter(Boolean);
     case 'folha_rf':
       return REFRESH_FOLHA_RF.split(';').map((s) => s.trim()).filter(Boolean);
+    case 'geo':
+      return REFRESH_GEO.split(';').map((s) => s.trim()).filter(Boolean);
     case 'todas':
       return [
         ...REFRESH_FAMILIA_CPF_VISITAS.split(';').map((s) => s.trim()).filter(Boolean),
         ...REFRESH_FOLHA_RF.split(';').map((s) => s.trim()).filter(Boolean),
+        ...REFRESH_GEO.split(';').map((s) => s.trim()).filter(Boolean),
       ];
     default:
       return [];

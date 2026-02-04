@@ -178,9 +178,17 @@ export default function AdminPage() {
           >
             {refreshLoading === 'folha_rf' ? 'Executando…' : 'Só Folha RF'}
           </button>
+          <button
+            type="button"
+            onClick={() => runRefresh('geo')}
+            disabled={!!refreshLoading}
+            className="btn-secondary disabled:opacity-50"
+          >
+            {refreshLoading === 'geo' ? 'Executando…' : 'Só match Geo'}
+          </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          'Atualizar todas as views' roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, depois as 5 MVs da Folha RF. Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
+          &quot;Atualizar todas as views&quot; roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, 5 MVs da Folha RF e mv_familias_geo. Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
         </p>
       </section>
 

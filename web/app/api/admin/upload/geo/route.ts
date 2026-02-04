@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: `Geo: ${rowCount} registro(s) carregado(s). Tabela tbl_geo atualizada. cep_norm preenchido.`,
       rowCount,
-      hint: 'Se usar vw_familias_geo, execute create_geo_match.sql no banco (uma vez) e as consultas já usarão os dados.',
+      hint: 'Clique em "Atualizar match Geo" na página Geolocalização (ou Manutenção) para repopular mv_familias_geo.',
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

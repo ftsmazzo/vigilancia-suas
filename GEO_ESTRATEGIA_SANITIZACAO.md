@@ -2,6 +2,7 @@
 
 ## Problema em resumo
 
+- **Escopo:** A tabela Geo e o match Geo × famílias servem à **Vigilância Socioassistencial** (território e números). A Geo interage **exclusivamente** com cadu_raw / vw_familias_limpa — não com a Agenda Form (visitas e listagem).
 - **Geo:** base oficial de endereços/CEP do município (com lat/long, bairro, CRAS, CREAS).
 - **CADU:** endereços e CEP vindos do cadastro (entrada manual, grafias variadas).
 - **Cruzar só por CEP** é arriscado:
@@ -9,6 +10,13 @@
   2. **Pior:** endereço certo no CADU, mas **CEP “central”** (um CEP genérico da região). Ao cruzar só por CEP, a territorialidade vai para um ponto que não é o endereço real (ex.: família no bairro X com CEP do Centro).
 
 Objetivo: **sanitizar ao máximo** para atribuir territorialidade (bairro, CRAS, lat/long) só quando houver confiança, sem “jogar” o cadastrador para um lugar que não existe.
+
+### Cenário real (por que é desafiador)
+
+- **CADU:** endereços com grafia errada ou variada; CEPs que não batem com o endereço real (ex.: CEP "central"); a tabela repete muitos endereços/CEPs (várias famílias no mesmo endereço).
+- **Geo:** tabela base de endereços do município **sem repetição** — relação **1 (Geo) : N (famílias)**. É a **fonte da verdade** para território (bairro, CRAS, lat/long). Também pode estar desatualizada: haverá endereços no CADU que ainda não existem na Geo.
+- **Necessidade:** atualizar e validar **dos dois lados** (Geo e CADU), mas **sempre usar a Geo** para exibir território e contar famílias (como no Power BI: relação 1-N entre CEP da Geo e das famílias; usar Geo para mapa e totais).
+- **Validação no painel:** quando a tabela CADU (ou Geo) for atualizada, rodar o refresh no painel (botão "Atualizar match Geo" ou "Atualizar todas as views") para repopular `mv_familias_geo` e manter as consultas rápidas.
 
 ---
 
@@ -94,7 +102,7 @@ Com isso já dá para:
 | **norm_logradouro_para_match(...)** | Função que devolve string normalizada para comparação (tipo + título + nome, sem acento, abreviações padronizadas). |
 | **tbl_logradouro_canonico** | Variante (CADU) → logradouro canônico (Geo/Via CEP). |
 | **tbl_via_cep_cache** | Cache de respostas Via CEP (por CEP e/ou por endereço). |
-| **vw_familias_geo** ou **vw_familias_territorio** | View que faz o match “seguro” (CEP + logradouro) entre `vw_familias_limpa` e `tbl_geo`, usando normalização e, quando existir, `tbl_logradouro_canonico`; expõe bairro_geo, cras_geo, lat, long, e flag de confiança. Inicialmente pode só fazer match direto; depois integrar Via CEP e canônico. |
+| **mv_familias_geo** | Materialized view: match “seguro” (CEP + logradouro) entre `vw_familias_limpa` e `tbl_geo`, usando normalização e, quando existir, `tbl_logradouro_canonico`; expõe bairro_geo, cras_geo, lat, long, e flag de confiança. Inicialmente pode só fazer match direto; depois integrar Via CEP e canônico. |
 
 ---
 

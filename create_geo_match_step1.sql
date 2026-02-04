@@ -1,16 +1,12 @@
 -- =============================================================================
--- Match Geo × CADU (Fase 1 da estratégia de sanitização).
--- Cria: norm_logradouro_para_match(t), mv_familias_geo (materialized view).
--- Geo = fonte da verdade (1) — (N) famílias; sempre usar Geo para território.
--- Requer: create_views_cadu.sql (norm_cep, vw_familias_limpa), tbl_geo carregada.
--- Ver: GEO_ESTRATEGIA_SANITIZACAO.md, GUIA_GEO.md.
+-- ETAPA 1 – Match Geo × CADU (parte pesada).
+-- Rode este script primeiro. Pode levar vários minutos (5–30+). Não cancele.
+-- Depois que terminar, rode create_geo_match_step2.sql (índice + comentário).
 --
--- Se der TIMEOUT: rode em 2 etapas — create_geo_match_step1.sql (pesado) e
--- create_geo_match_step2.sql (rápido). No PGAdmin: Aumente o timeout da Query Tool
--- (File → Preferences → Query Tool → Query execution timeout = 0 ou 3600).
+-- Se der "canceling statement due to user request": o PGAdmin está cancelando
+-- (timeout do cliente). Rode este script pelo TERMINAL com psql (ver GUIA_GEO.md).
 -- =============================================================================
 
--- Desliga o timeout desta sessão (só afeta o servidor; se o cliente cortar, não adianta).
 SET statement_timeout = '0';
 
 -- Função: normaliza uma linha de endereço para comparação (maiúsculas, sem acento, abreviações padronizadas).
@@ -20,29 +16,28 @@ DECLARE
 BEGIN
   s := UPPER(TRIM(COALESCE(t, '')));
   IF s = '' THEN RETURN NULL; END IF;
-  -- Remove acentos (minúsculas e maiúsculas)
   s := TRANSLATE(s,
     'áàãâäéèêëíìîïóòõôöúùûüçÁÀÃÂÄÉÈÊËÍÌÎÏÓÒÕÔÖÚÙÛÜÇ',
     'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC');
-  -- Abreviações comuns (palavra inteira). PRAÇA vira PRACA pelo TRANSLATE acima.
   s := REGEXP_REPLACE(s, '\mR\.?\M', 'RUA', 'gi');
   s := REGEXP_REPLACE(s, '\mAV\.?\M', 'AVENIDA', 'gi');
   s := REGEXP_REPLACE(s, '\mPRA\.?\M', 'PRACA', 'gi');
   s := REGEXP_REPLACE(s, '\mDR\.?\M', 'DOUTOR', 'gi');
   s := REGEXP_REPLACE(s, '\mPROF\.?\M', 'PROFESSOR', 'gi');
-  -- Múltiplos espaços
   s := REGEXP_REPLACE(TRIM(s), '\s+', ' ', 'g');
   RETURN NULLIF(s, '');
 END;
 $$ LANGUAGE PLPGSQL IMMUTABLE;
 
-COMMENT ON FUNCTION norm_logradouro_para_match(TEXT) IS 'Normaliza endereço para match Geo×CADU: maiúsculas, sem acento, abreviações padronizadas.';
+-- Índice para acelerar o join (CEP + logradouro normalizado na Geo).
+CREATE INDEX IF NOT EXISTS idx_tbl_geo_cep_logradouro_match
+  ON tbl_geo (cep_norm, norm_logradouro_para_match(endereco))
+  WHERE cep_norm IS NOT NULL;
 
--- Materialized view: famílias do CADU que deram match com a Geo (CEP + logradouro normalizado igual).
--- Evita recalcular o join pesado a cada consulta; refresh no painel quando CADU ou Geo for atualizado.
--- Geo = 1, famílias = N; sempre usar bairro_geo/cras_geo/lat_geo/long_geo para território.
 DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo CASCADE;
 DROP VIEW IF EXISTS vw_familias_geo CASCADE;
+
+-- Esta parte é a que demora (join completo). Aguarde até concluir.
 CREATE MATERIALIZED VIEW mv_familias_geo AS
 SELECT
   f.d_cd_ibge,
@@ -63,7 +58,7 @@ SELECT
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
   g.endereco           AS endereco_geo,
-  'alto'::TEXT         AS confianca_match  -- CEP + logradouro normalizado iguais
+  'alto'::TEXT         AS confianca_match
 FROM vw_familias_limpa f
 INNER JOIN tbl_geo g
   ON g.cep_norm = f.d_num_cep_logradouro_fam
@@ -76,7 +71,3 @@ INNER JOIN tbl_geo g
           NULLIF(TRIM(COALESCE(f.d_nom_logradouro_fam, '')), '')
         )
       ) = norm_logradouro_para_match(g.endereco);
-
-CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod_familiar_fam);
-
-COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match seguro na Geo (CEP + logradouro). Geo = fonte da verdade para território. Refresh no painel após atualizar CADU ou Geo.';

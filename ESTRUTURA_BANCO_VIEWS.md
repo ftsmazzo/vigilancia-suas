@@ -4,6 +4,19 @@ Referência das **extrações** (uploads), **tabelas**, **views** e **ordem de e
 
 ---
 
+## Divisão do projeto (escopo)
+
+O projeto tem dois focos distintos:
+
+| Foco | Objetivo | Dados / views principais |
+|------|----------|---------------------------|
+| **Agenda Form** | Agendamento de visitas e criação de listagem. Tudo que foi usado para criar a aba de Agenda Form serve a esse fim específico. | Visitas, listagens, agendamento (visitas_raw, mv_familia_situacao, mv_cpf_familia_situacao, vw_filtro_controle, etc.). |
+| **Vigilância Socioassistencial (números / território)** | Números e territorialidade a partir do CADU. A tabela **Geo** interage **exclusivamente** com **cadu_raw** (e com **vw_familias_limpa**, que deriva do CADU). | cadu_raw, vw_familias_limpa, tbl_geo, **mv_familias_geo** (match Geo × famílias para território e contagem). |
+
+Em resumo: **Geo** é para Vigilância Socioassistencial (território e números de famílias), não para a Agenda Form. A Agenda Form usa suas próprias views e fluxos para visitas e listagem.
+
+---
+
 ## 1. Extrações (uploads) que alimentam o banco
 
 Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8N** (workflows) ou, no futuro, pelo upload na aplicação web.
@@ -76,11 +89,13 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 | Objeto | Tipo | Script | Precisa refresh? |
 |--------|------|--------|-------------------|
 | `norm_logradouro_para_match(t)` | FUNÇÃO | `create_geo_match.sql` | Não |
-| `vw_familias_geo` | VIEW | `create_geo_match.sql` | Não |
+| `mv_familias_geo` | MATERIALIZED VIEW | `create_geo_match.sql` | **Sim** |
 
-**Ordem:** criar `tbl_geo` e carregar geo.csv antes de rodar `create_geo_match.sql`. Ver **GUIA_GEO.md**.
+**Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel (Geolocalização ou Manutenção) após cada upload de Geo ou CADU. Geo = fonte da verdade (1) — famílias (N); sempre usar bairro_geo/cras_geo para território.
 
-**Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf, vw_familias_geo) são atualizadas automaticamente quando os dados das tabelas base mudam; não precisam de repopulação. Apenas as **materialized views** (mv_*) precisam de refresh após nova carga.
+**Refresh:** `refresh_geo.sql` ou painel → ação **geo** → `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo`.
+
+**Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf) são atualizadas automaticamente. As **materialized views** (mv_*) precisam de refresh após nova carga.
 
 ---
 
@@ -101,12 +116,15 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 
 **Views normais** (vw_* sem mv_): atualizam sozinhas quando os dados das tabelas mudam; não é preciso fazer nada.
 
-**Materialized views** (mv_*): precisam ser **repopuladas** após cada carga de CADU ou SIBEC. Na aplicação web (Manutenção):
+**Materialized views** (mv_*): precisam ser **repopuladas** após cada carga de CADU ou SIBEC (e, se usar Geo, após carga de Geo). Na aplicação web (Manutenção ou Geolocalização):
 
 1. Depois de fazer upload de **CADU**, **Bloqueados**, **Cancelados** ou **Folha de Pagamento**, clique em **"Atualizar todas as views"**.
-2. Isso executa em sequência: refresh de `mv_familia_situacao` e `mv_cpf_familia_situacao`, depois refresh das 5 MVs da Folha RF.
+2. Isso executa em sequência: refresh de `mv_familia_situacao` e `mv_cpf_familia_situacao`, depois refresh das 5 MVs da Folha RF e, por fim, **refresh de `mv_familias_geo`** (match Geo).
+3. Se você **só** atualizou a base Geo (upload na página Geolocalização), pode clicar em **"Atualizar match Geo"** (só essa MV) na mesma página — ou usar **"Atualizar todas as views"** para manter tudo em dia.
 
-Assim as consultas (Agenda Forms, etc.) passam a refletir os dados novos.
+**Por que usar materialized view para Geo?** O match entre CADU e Geo (CEP + logradouro normalizado) é um join pesado. Se fosse uma view normal, cada consulta recalcularia esse join e o servidor poderia ir a 100% de CPU. Com **mv_familias_geo**, o resultado fica armazenado e a consulta é rápida; o custo do join acontece só quando você roda o refresh no painel (após atualizar CADU ou Geo).
+
+Assim as consultas (Agenda Forms, território, etc.) passam a refletir os dados novos.
 
 ---
 
@@ -119,7 +137,7 @@ Se ao clicar em **"Atualizar todas as views"** aparecer erro do tipo `relation "
 1. `create_views_cadu.sql` — funções de normalização + `vw_familias_limpa`, `vw_pessoas_limpa`
 2. `create_view_familia_cpf_visitas.sql` — `mv_familia_situacao`, `mv_cpf_familia_situacao`, `vw_cpf_situacao`, `vw_filtro_controle`
 3. `create_view_folha_rf.sql` — 5 MVs da folha + `vw_folha_rf`
-4. **Geo (opcional):** `create_tbl_geo.sql` → carregar geo.csv (`node scripts/load-geo.js` + `psql -f load_geo_generated.sql`) → `create_geo_match.sql` — `norm_logradouro_para_match`, `vw_familias_geo`. Ver **GUIA_GEO.md**.
+4. **Geo (opcional):** `create_tbl_geo.sql` → carregar geo.csv (upload na página Geolocalização) → `create_geo_match.sql` — `norm_logradouro_para_match`, `mv_familias_geo`. Depois: **Atualizar match Geo** no painel. Ver **GUIA_GEO.md**.
 
 Exemplo com psql (na raiz do repositório):
 

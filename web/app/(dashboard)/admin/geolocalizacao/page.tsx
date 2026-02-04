@@ -11,6 +11,10 @@ export default function GeolocalizacaoPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [createMvLoading, setCreateMvLoading] = useState(false);
+  const [createMvMsg, setCreateMvMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -51,6 +55,53 @@ export default function GeolocalizacaoPage() {
     }
   }
 
+  async function runRefreshGeo() {
+    setRefreshMsg(null);
+    setRefreshLoading(true);
+    try {
+      const res = await fetch('/api/admin/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'geo' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRefreshMsg({ type: 'err', text: data.error || 'Falha ao atualizar.' });
+        return;
+      }
+      setRefreshMsg({ type: 'ok', text: data.message || 'Match Geo atualizado.' });
+    } catch {
+      setRefreshMsg({ type: 'err', text: 'Erro de conexão.' });
+    } finally {
+      setRefreshLoading(false);
+    }
+  }
+
+  async function runCreateMv() {
+    setCreateMvMsg(null);
+    setCreateMvLoading(true);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 600000);
+      const res = await fetch('/api/admin/geo/create-mv', {
+        method: 'POST',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCreateMvMsg({ type: 'err', text: data.error || 'Falha ao criar mv_familias_geo.' });
+        return;
+      }
+      setCreateMvMsg({ type: 'ok', text: data.message || 'mv_familias_geo criada com sucesso.' });
+    } catch (e) {
+      const msg = e instanceof Error && e.name === 'AbortError' ? 'Tempo esgotado. Tente novamente ou use psql (ver GUIA_GEO.md).' : 'Erro de conexão.';
+      setCreateMvMsg({ type: 'err', text: msg });
+    } finally {
+      setCreateMvLoading(false);
+    }
+  }
+
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-[200px] text-slate-500">
@@ -76,20 +127,50 @@ export default function GeolocalizacaoPage() {
         </p>
       </div>
 
-      {uploadMsg && (
+      {(uploadMsg || refreshMsg || createMvMsg) && (
         <div
           className={`rounded-lg px-4 py-3 text-sm ${
-            uploadMsg.type === 'ok' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+            (uploadMsg ?? refreshMsg ?? createMvMsg)?.type === 'ok' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
           }`}
         >
-          {uploadMsg.text}
+          {(uploadMsg ?? refreshMsg ?? createMvMsg)?.text}
         </div>
       )}
 
       <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Criar ou recriar mv_familias_geo</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero (ex.: após timeout no PGAdmin). Pode demorar vários minutos — não feche a página.
+        </p>
+        <button
+          type="button"
+          onClick={runCreateMv}
+          disabled={createMvLoading}
+          className="btn-primary disabled:opacity-50"
+        >
+          {createMvLoading ? 'Criando… (aguarde)' : 'Criar/recriar mv_familias_geo'}
+        </button>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo (mv_familias_geo)</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Geo é a fonte da verdade (1) — famílias (N). O match CEP + logradouro normalizado fica na <strong>materialized view mv_familias_geo</strong>. Execute este refresh após atualizar tbl_geo (upload) ou cadu_raw (upload CADU) para repopular os dados de território.
+        </p>
+        <button
+          type="button"
+          onClick={runRefreshGeo}
+          disabled={refreshLoading}
+          className="btn-primary disabled:opacity-50"
+        >
+          {refreshLoading ? 'Atualizando…' : 'Atualizar match Geo'}
+        </button>
+      </section>
+
+      <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Fase 1 — Base Geo (tbl_geo)</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Carregue o CSV da base de endereços/CEP do município. Execute <strong>create_tbl_geo.sql</strong> no banco (PGAdmin) uma vez antes do primeiro upload.
+          Carregue o CSV da base de endereços/CEP do município. Execute <strong>create_tbl_geo.sql</strong> no banco (PGAdmin) uma vez antes do primeiro upload. Depois do upload, use &quot;Atualizar match Geo&quot; acima.
         </p>
         <form onSubmit={handleSubmit} className="p-4 rounded-lg border border-slate-200 bg-slate-50/50">
           <div className="flex flex-wrap items-end gap-3">

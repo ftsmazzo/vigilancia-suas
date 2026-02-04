@@ -3,7 +3,7 @@ import { getSession, requireAdmin } from '@/lib/auth';
 import { runRefreshStatements } from '@/lib/db';
 import { getRefreshSql, type RefreshAction } from '@/lib/refresh-sql';
 
-const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf', 'todas'];
+const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf', 'geo', 'todas'];
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
@@ -29,8 +29,10 @@ export async function POST(request: NextRequest) {
 
     let message =
       action === 'todas'
-        ? 'Refresh executado: Família/CPF/Visitas e Folha RF.'
-        : `Refresh executado: ${action}.`;
+        ? 'Refresh executado: Família/CPF/Visitas, Folha RF e Geo.'
+        : action === 'geo'
+          ? 'Refresh executado: match Geo (mv_familias_geo).'
+          : `Refresh executado: ${action}.`;
     if (refreshed.length) message += ` Atualizadas: ${refreshed.join(', ')}.`;
     if (failed.length) {
       message += ` Não existem ou falharam: ${failed.map((f) => f.name).join(', ')}. Rode os scripts de criação das views (ver ESTRUTURA_BANCO_VIEWS.md → Restaurar views).`;
