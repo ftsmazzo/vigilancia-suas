@@ -15,6 +15,15 @@ export default function GeolocalizacaoPage() {
   const [refreshMsg, setRefreshMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [createMvLoading, setCreateMvLoading] = useState(false);
   const [createMvMsg, setCreateMvMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [analiseLoading, setAnaliseLoading] = useState(false);
+  const [analise, setAnalise] = useState<{
+    total_familias_24m: number;
+    com_cep_preenchido_24m: number;
+    cep_existe_na_geo_24m: number;
+    endereco_coincide_24m: number;
+    endereco_divergente_24m: number;
+  } | null>(null);
+  const [analiseErr, setAnaliseErr] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -85,6 +94,25 @@ export default function GeolocalizacaoPage() {
     }
   }
 
+  async function runAnaliseCepLogradouro() {
+    setAnaliseErr(null);
+    setAnalise(null);
+    setAnaliseLoading(true);
+    try {
+      const res = await fetch('/api/data/analise-cep-logradouro-24m');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAnaliseErr(data.error || 'Falha ao calcular.');
+        return;
+      }
+      setAnalise(data);
+    } catch {
+      setAnaliseErr('Erro de conexão.');
+    } finally {
+      setAnaliseLoading(false);
+    }
+  }
+
   async function runCreateMv() {
     setCreateMvMsg(null);
     setCreateMvLoading(true);
@@ -147,6 +175,36 @@ export default function GeolocalizacaoPage() {
           {(uploadMsg ?? refreshMsg ?? createMvMsg)?.text}
         </div>
       )}
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Análise CEP × logradouro (últimos 24 meses)</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Confronta o join por CEP com a Geo e verifica se o endereço (logradouro) do CADU coincide com o da Geo. Considera apenas cadastros com <strong>data de atualização até 24 meses</strong>. Assim você vê o volume de famílias com CEP que existe na Geo mas endereço divergente (ex.: CEP genérico).
+        </p>
+        <button
+          type="button"
+          onClick={runAnaliseCepLogradouro}
+          disabled={analiseLoading}
+          className="btn-primary disabled:opacity-50 mb-4"
+        >
+          {analiseLoading ? 'Calculando…' : 'Calcular análise'}
+        </button>
+        {analiseErr && (
+          <p className="text-sm text-red-600 mb-2">{analiseErr}</p>
+        )}
+        {analise && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm">
+            <p className="font-medium text-slate-700 mb-2">Resultado (cadastros atualizados nos últimos 24 meses)</p>
+            <ul className="space-y-1 text-slate-600">
+              <li><strong>Total de famílias:</strong> {analise.total_familias_24m.toLocaleString('pt-BR')}</li>
+              <li><strong>Com CEP preenchido:</strong> {analise.com_cep_preenchido_24m.toLocaleString('pt-BR')}</li>
+              <li><strong>CEP existe na Geo (join por CEP):</strong> {analise.cep_existe_na_geo_24m.toLocaleString('pt-BR')}</li>
+              <li><strong>Endereço coincide (CADU = Geo):</strong> {analise.endereco_coincide_24m.toLocaleString('pt-BR')}</li>
+              <li><strong>Endereço divergente (erro / CEP genérico):</strong> <span className="text-amber-700 font-medium">{analise.endereco_divergente_24m.toLocaleString('pt-BR')}</span></li>
+            </ul>
+          </div>
+        )}
+      </section>
 
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Criar ou recriar mv_familias_geo</h2>

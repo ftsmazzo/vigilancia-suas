@@ -139,6 +139,15 @@ Os arquivos **.sql** e o **geo.csv** você pode ter em cópia local (por exemplo
 
 ---
 
+## Análise CEP × logradouro (últimos 24 meses)
+
+Para medir o volume de cadastros **atualizados nos últimos 24 meses** em que o CEP existe na Geo mas o **endereço diverge** (ex.: CEP genérico):
+
+- **No painel:** Admin → Geolocalização → seção **"Análise CEP × logradouro (últimos 24 meses)"** → **Calcular análise**. O resultado mostra totais, quantos têm CEP na Geo e quantos coincidem vs divergem.
+- **No PGAdmin:** execute o script **analise_cep_logradouro_24m.sql** (requer `norm_logradouro_para_match`, `vw_familias_limpa`, `tbl_geo`). O SELECT retorna uma linha com: `total_familias_24m`, `com_cep_preenchido_24m`, `cep_existe_na_geo_24m`, `endereco_coincide_24m`, `endereco_divergente_24m`.
+
+---
+
 ## Próximos passos (depois da Fase 1)
 
 - **Cruzamento:** Use **mv_familias_geo** (só famílias que bateram na Geo). Famílias e pessoas se ligam por código familiar; para território (CRAS, bairro, lat/long), faça JOIN com mv_familias_geo. Nenhuma view extra.
