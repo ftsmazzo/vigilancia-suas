@@ -14,6 +14,7 @@ const nav = [
   { href: '/numerico', label: 'Dashboard Numérico' },
   { href: '/consulta', label: 'Agenda Forms' },
   { href: '/admin', label: 'Manutenção', adminOnly: true },
+  { href: '/admin/geolocalizacao', label: 'Geolocalização', adminOnly: true },
 ];
 
 export function AppShell({ user, children }: AppShellProps) {

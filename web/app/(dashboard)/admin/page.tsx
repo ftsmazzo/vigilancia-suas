@@ -193,6 +193,12 @@ export default function AdminPage() {
         <UploadForm type="sibec-bloqueados" label="SIBEC Bloqueados" accept=".csv" hint="CSV com vírgula" />
         <UploadForm type="sibec-cancelados" label="SIBEC Cancelados" accept=".csv" hint="CSV com vírgula" />
         <UploadForm type="sibec-folha" label="SIBEC Folha de Pagamento" accept=".csv" hint="CSV com vírgula" />
+        <p className="text-sm text-slate-500 mt-2">
+          <strong>Geolocalização</strong> (base Geo, variantes, Via CEP) está em página separada:{' '}
+          <Link href="/admin/geolocalizacao" className="text-primary-600 hover:underline">
+            Geolocalização
+          </Link>
+        </p>
       </section>
 
       <section className="card p-6">

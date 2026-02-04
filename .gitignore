@@ -30,3 +30,6 @@ npm-debug.log*
 SIBEC-*.csv
 Dezembro/tudo.csv
 Janeiro/tudo.csv
+
+# SQL gerado por scripts (pode ser recriado)
+load_geo_generated.sql

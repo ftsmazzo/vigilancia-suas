@@ -28,6 +28,7 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 |--------|--------|-----|
 | `app.users` | `create_schema_app.sql` | Usuários da aplicação web (login). Aplicado automaticamente na primeira subida do container. |
 | `tbl_codigos_cadu` | `create_tbl_codigos_cadu.sql` + `insert_tbl_codigos_cadu_generated.sql` | Descritores do dicionário (sexo, raça, etc.). Gerar inserts com `node scripts/gerar_tbl_codigos_from_dicionario.js`. |
+| `tbl_geo` | `create_tbl_geo.sql` | Base de endereços/CEP do município (geo.csv). Carga: ver `GEO_ESTRATEGIA_SANITIZACAO.md` e script de carga. **Georreferenciamento:** cruzar com CADU por CEP + logradouro normalizado (não só CEP). |
 
 **Schemas:** O schema **`app`** tem só a tabela `app.users` (login). As **funções** (`norm_cpf`, `norm_cod_familiar`, etc.) e as **sequências** (`cadu_raw_id_seq`, `sibec_*_id_seq`, etc.) ficam no schema **`public`**, junto com as tabelas de extração e as views. É normal o schema app não listar funções/sequências — elas estão em public.
 
@@ -70,7 +71,16 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 
 **Refresh:** `refresh_folha_rf.sql` → `REFRESH MATERIALIZED VIEW CONCURRENTLY` das 5 MVs acima.
 
-**Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf) são atualizadas automaticamente quando os dados das tabelas base mudam; não precisam de repopulação. Apenas as **materialized views** (mv_*) precisam de refresh após nova carga.
+### 3.4 Geo (opcional; depende de tbl_geo carregada)
+
+| Objeto | Tipo | Script | Precisa refresh? |
+|--------|------|--------|-------------------|
+| `norm_logradouro_para_match(t)` | FUNÇÃO | `create_geo_match.sql` | Não |
+| `vw_familias_geo` | VIEW | `create_geo_match.sql` | Não |
+
+**Ordem:** criar `tbl_geo` e carregar geo.csv antes de rodar `create_geo_match.sql`. Ver **GUIA_GEO.md**.
+
+**Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf, vw_familias_geo) são atualizadas automaticamente quando os dados das tabelas base mudam; não precisam de repopulação. Apenas as **materialized views** (mv_*) precisam de refresh após nova carga.
 
 ---
 
@@ -109,6 +119,7 @@ Se ao clicar em **"Atualizar todas as views"** aparecer erro do tipo `relation "
 1. `create_views_cadu.sql` — funções de normalização + `vw_familias_limpa`, `vw_pessoas_limpa`
 2. `create_view_familia_cpf_visitas.sql` — `mv_familia_situacao`, `mv_cpf_familia_situacao`, `vw_cpf_situacao`, `vw_filtro_controle`
 3. `create_view_folha_rf.sql` — 5 MVs da folha + `vw_folha_rf`
+4. **Geo (opcional):** `create_tbl_geo.sql` → carregar geo.csv (`node scripts/load-geo.js` + `psql -f load_geo_generated.sql`) → `create_geo_match.sql` — `norm_logradouro_para_match`, `vw_familias_geo`. Ver **GUIA_GEO.md**.
 
 Exemplo com psql (na raiz do repositório):
 
