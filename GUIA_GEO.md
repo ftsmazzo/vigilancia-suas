@@ -141,5 +141,5 @@ Os arquivos **.sql** e o **geo.csv** você pode ter em cópia local (por exemplo
 
 ## Próximos passos (depois da Fase 1)
 
-- **Fase 2:** tbl_logradouro_canonico (variantes de grafia). Ver **GEO_ESTRATEGIA_SANITIZACAO.md**.
-- **Fase 3:** Via CEP em lote com cache. Ver **GEO_ESTRATEGIA_SANITIZACAO.md**.
+- **Cruzamento:** Use **mv_familias_geo** (só famílias que bateram na Geo). Famílias e pessoas se ligam por código familiar; para território (CRAS, bairro, lat/long), faça JOIN com mv_familias_geo. Nenhuma view extra.
+- **Via CEP:** Objetivo = enriquecer a **tbl_geo** com endereços que o CADU tem e a Geo ainda não tem (locais novos). Depois do refresh, mais famílias entram na mv_familias_geo.

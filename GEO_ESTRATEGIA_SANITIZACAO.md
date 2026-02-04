@@ -102,7 +102,7 @@ Com isso já dá para:
 | **norm_logradouro_para_match(...)** | Função que devolve string normalizada para comparação (tipo + título + nome, sem acento, abreviações padronizadas). |
 | **tbl_logradouro_canonico** | Variante (CADU) → logradouro canônico (Geo/Via CEP). |
 | **tbl_via_cep_cache** | Cache de respostas Via CEP (por CEP e/ou por endereço). |
-| **mv_familias_geo** | Materialized view: match “seguro” (CEP + logradouro) entre `vw_familias_limpa` e `tbl_geo`, usando normalização e, quando existir, `tbl_logradouro_canonico`; expõe bairro_geo, cras_geo, lat, long, e flag de confiança. Inicialmente pode só fazer match direto; depois integrar Via CEP e canônico. |
+| **mv_familias_geo** | Materialized view: famílias CADU que deram match na Geo (CEP + logradouro). Só entra quem bate na Geo. Expõe cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Cruzamento: famílias/pessoas por código familiar com mv_familias_geo. Via CEP = enriquecer tbl_geo; refresh agrega mais famílias. | “seguro” (CEP + logradouro) entre `vw_familias_limpa` e `tbl_geo`, usando normalização e, quando existir, `|
 
 ---
 

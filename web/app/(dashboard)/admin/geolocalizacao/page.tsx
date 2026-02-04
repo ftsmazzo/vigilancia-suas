@@ -204,17 +204,23 @@ export default function GeolocalizacaoPage() {
         </form>
       </section>
 
-      <section className="card p-6 border-slate-200 opacity-90">
-        <h2 className="font-medium text-slate-700 mb-2">Fase 2 — Dicionário de variantes (em breve)</h2>
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Cruzamento e territorialização</h2>
+        <p className="text-sm text-slate-500 mb-2">
+          <strong>mv_familias_geo</strong> = famílias do CADU que deram match na Geo (CEP + logradouro). Só entra endereço que existe na Geo — CEP central/divergente fica de fora. Traz da Geo: <strong>cep_geo</strong>, <strong>endereco_geo</strong>, <strong>bairro_geo</strong>, <strong>cras_geo</strong>, <strong>creas_geo</strong>, <strong>lat_geo</strong>, <strong>long_geo</strong>.
+        </p>
+        <p className="text-sm text-slate-500 mb-2">
+          Cruzamento: <strong>famílias</strong> (vw_familias_limpa) e <strong>pessoas</strong> (vw_pessoas_limpa) se ligam por <strong>código familiar</strong>. Para ter território (CRAS, bairro, lat/long), faça JOIN por código familiar com <strong>mv_familias_geo</strong>. Nada de view extra — só essa MV.
+        </p>
         <p className="text-sm text-slate-500">
-          Tabela de variantes de logradouro (CADU → canônico) para melhorar o match quando a mesma rua está escrita de várias formas. Ver GEO_ESTRATEGIA_SANITIZACAO.md.
+          Conforme tbl_geo for atualizada (Via CEP ou outras fontes com endereços novos do município), rode &quot;Atualizar match Geo&quot; para agregar mais famílias à mv_familias_geo até estar tudo relacionado.
         </p>
       </section>
 
       <section className="card p-6 border-slate-200 opacity-90">
-        <h2 className="font-medium text-slate-700 mb-2">Fase 3 — Via CEP em lote (em breve)</h2>
+        <h2 className="font-medium text-slate-700 mb-2">Via CEP — enriquecer a Geo (em breve)</h2>
         <p className="text-sm text-slate-500">
-          Cache e validação CEP↔endereço com Via CEP para corrigir CEP central e CEPs novos. Ver GEO_ESTRATEGIA_SANITIZACAO.md.
+          Objetivo: incluir na <strong>tbl_geo</strong> endereços que existem no CADU e ainda não estão na Geo (locais novos, base Geo de 2023). Via CEP em lote para buscar dados e INSERT na Geo; depois refresh da mv_familias_geo agrega mais famílias.
         </p>
       </section>
     </div>

@@ -52,12 +52,13 @@ SELECT
   f.d_num_logradouro_fam,
   f.d_num_cep_logradouro_fam,
   f.d_nom_unidade_territorial_fam,
+  g.cep                AS cep_geo,
+  g.endereco           AS endereco_geo,
   g.bairro             AS bairro_geo,
   g.cras               AS cras_geo,
   g.creas              AS creas_geo,
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
-  g.endereco           AS endereco_geo,
   'alto'::TEXT         AS confianca_match
 FROM vw_familias_limpa f
 INNER JOIN tbl_geo g

@@ -42,7 +42,6 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 | `app.users` | `create_schema_app.sql` | Usuários da aplicação web (login). Aplicado automaticamente na primeira subida do container. |
 | `tbl_codigos_cadu` | `create_tbl_codigos_cadu.sql` + `insert_tbl_codigos_cadu_generated.sql` | Descritores do dicionário (sexo, raça, etc.). Gerar inserts com `node scripts/gerar_tbl_codigos_from_dicionario.js`. |
 | `tbl_geo` | `create_tbl_geo.sql` | Base de endereços/CEP do município (geo.csv). Carga: ver `GEO_ESTRATEGIA_SANITIZACAO.md` e script de carga. **Georreferenciamento:** cruzar com CADU por CEP + logradouro normalizado (não só CEP). |
-
 **Schemas:** O schema **`app`** tem só a tabela `app.users` (login). As **funções** (`norm_cpf`, `norm_cod_familiar`, etc.) e as **sequências** (`cadu_raw_id_seq`, `sibec_*_id_seq`, etc.) ficam no schema **`public`**, junto com as tabelas de extração e as views. É normal o schema app não listar funções/sequências — elas estão em public.
 
 ---

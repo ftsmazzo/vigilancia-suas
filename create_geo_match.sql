@@ -38,7 +38,7 @@ $$ LANGUAGE PLPGSQL IMMUTABLE;
 
 COMMENT ON FUNCTION norm_logradouro_para_match(TEXT) IS 'Normaliza endereço para match Geo×CADU: maiúsculas, sem acento, abreviações padronizadas.';
 
--- Materialized view: famílias do CADU que deram match com a Geo (CEP + logradouro normalizado igual).
+-- Materialized view: famílias do CADU que deram match com a Geo (CEP + logradouro normalizado iguais).
 -- Evita recalcular o join pesado a cada consulta; refresh no painel quando CADU ou Geo for atualizado.
 -- Geo = 1, famílias = N; sempre usar bairro_geo/cras_geo/lat_geo/long_geo para território.
 DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo CASCADE;
@@ -57,13 +57,14 @@ SELECT
   f.d_num_logradouro_fam,
   f.d_num_cep_logradouro_fam,
   f.d_nom_unidade_territorial_fam,
+  g.cep                AS cep_geo,
+  g.endereco           AS endereco_geo,
   g.bairro             AS bairro_geo,
   g.cras               AS cras_geo,
   g.creas              AS creas_geo,
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
-  g.endereco           AS endereco_geo,
-  'alto'::TEXT         AS confianca_match  -- CEP + logradouro normalizado iguais
+  'alto'::TEXT         AS confianca_match
 FROM vw_familias_limpa f
 INNER JOIN tbl_geo g
   ON g.cep_norm = f.d_num_cep_logradouro_fam
@@ -79,4 +80,4 @@ INNER JOIN tbl_geo g
 
 CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod_familiar_fam);
 
-COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match seguro na Geo (CEP + logradouro). Geo = fonte da verdade para território. Refresh no painel após atualizar CADU ou Geo.';
+COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Cruzamento: famílias/pessoas por código familiar com mv_familias_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.';

@@ -43,12 +43,13 @@ SELECT
   f.d_num_logradouro_fam,
   f.d_num_cep_logradouro_fam,
   f.d_nom_unidade_territorial_fam,
+  g.cep                AS cep_geo,
+  g.endereco           AS endereco_geo,
   g.bairro             AS bairro_geo,
   g.cras               AS cras_geo,
   g.creas              AS creas_geo,
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
-  g.endereco           AS endereco_geo,
   'alto'::TEXT         AS confianca_match
 FROM vw_familias_limpa f
 INNER JOIN tbl_geo g
@@ -85,7 +86,7 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
       'CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod_familiar_fam)'
     );
     await client.query(
-      "COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match seguro na Geo (CEP + logradouro). Geo = fonte da verdade para território. Refresh no painel após atualizar CADU ou Geo.'"
+      "COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Cruzamento: famílias/pessoas por código familiar com mv_familias_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.'"
     );
     return { ok: true };
   } catch (e) {
