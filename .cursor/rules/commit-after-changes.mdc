@@ -1,0 +1,21 @@
+---
+description: Após alterar código, sempre fazer commit e push (não esperar o usuário pedir)
+alwaysApply: true
+---
+
+# Commit e push após alterações
+
+Quando você **alterar qualquer arquivo** do projeto (código, config, SQL, etc.):
+
+1. **Sempre** executar ao final da tarefa:
+   - `git add -A`
+   - `git commit -m "mensagem clara do que foi feito"`
+   - `git push origin <branch-atual>` (ou `git push`)
+
+2. **Mensagem de commit**: objetiva, em português, descrevendo a alteração (ex.: "API create usa SQL embutido; botões Manutenção funcionam após deploy").
+
+3. **Não** perguntar "quer que eu faça o commit?" — fazer direto. O usuário não quer ter que pedir.
+
+4. Se o repositório não tiver `origin` ou o push falhar por rede/auth, informar brevemente e seguir.
+
+**Exceção**: se o usuário disser explicitamente "não commitar" ou "só mostrar as mudanças", não fazer commit/push.
