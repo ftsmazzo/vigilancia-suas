@@ -10,7 +10,6 @@ DROP VIEW IF EXISTS vw_grupos_populacionais CASCADE;
 
 CREATE VIEW vw_grupos_populacionais AS
 SELECT
-  f.d_cd_ibge,
   f.d_cod_familiar_fam,
   -- Faixa RFPC (renda per capita)
   f.d_fx_rfpc,
@@ -67,8 +66,7 @@ DROP VIEW IF EXISTS vw_grupos_populacionais_pessoa CASCADE;
 CREATE VIEW vw_grupos_populacionais_pessoa AS
 SELECT
   p.id,
-  p.d_cd_ibge,
-  p.d_cod_familiar_fam,
+  p.p_cod_familiar_fam,
   p.p_nom_pessoa,
   p.p_num_nis_pessoa_atual,
   p.p_cod_parentesco_rf_pessoa,
@@ -141,7 +139,7 @@ UNION ALL
 SELECT
   'Grupo tradicional MDS'::TEXT,
   COALESCE(c.descricao, 'Não informado'),
-  COUNT(DISTINCT (g.d_cd_ibge, g.d_cod_familiar_fam))::BIGINT
+  COUNT(DISTINCT g.d_cod_familiar_fam)::BIGINT
 FROM vw_grupos_populacionais g
 CROSS JOIN LATERAL unnest(
   CASE WHEN NULLIF(TRIM(g.d_ind_parc_mds_fam), '') IS NULL OR TRIM(g.d_ind_parc_mds_fam) = '' THEN ARRAY['0']::TEXT[]
@@ -182,8 +180,8 @@ COMMENT ON VIEW vw_contagem_por_grupo IS 'Contagem agrupada por grupo populacion
 -- =============================================================================
 SELECT
   (SELECT COUNT(*) FROM vw_pessoas_limpa p
-   INNER JOIN vw_familias_limpa f ON f.d_cd_ibge = p.d_cd_ibge AND f.d_cod_familiar_fam = p.d_cod_familiar_fam
+   INNER JOIN vw_familias_limpa f ON f.d_cod_familiar_fam = p.p_cod_familiar_fam
    WHERE f.d_ind_familia_quilombola_fam = '1') AS total_pessoas_quilombolas,
   (SELECT COUNT(*) FROM vw_pessoas_limpa p
-   INNER JOIN vw_familias_limpa f ON f.d_cd_ibge = p.d_cd_ibge AND f.d_cod_familiar_fam = p.d_cod_familiar_fam
+   INNER JOIN vw_familias_limpa f ON f.d_cod_familiar_fam = p.p_cod_familiar_fam
    WHERE f.d_cod_familia_indigena_fam = 1) AS total_pessoas_indigenas;

@@ -229,7 +229,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Criar ou recriar mv_familias_geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero. Pode demorar <strong>até 2 horas</strong> em base grande — não feche a página. Se der timeout mesmo assim, rode no PGAdmin (ou psql): <strong>create_geo_match_step1.sql</strong>, aguarde terminar, depois <strong>create_geo_match_step2.sql</strong>. Ver GUIA_GEO.md.
+          <strong>Antes:</strong> na <Link href="/admin" className="text-primary-600 hover:underline">Manutenção</Link>, execute &quot;1. Views CADU&quot; e &quot;2. mv_familias_limpa&quot;. Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero. Pode demorar <strong>até 2 horas</strong> em base grande — não feche a página. Se der timeout mesmo assim, rode no PGAdmin (ou psql): <strong>create_geo_match_step1.sql</strong>, aguarde terminar, depois <strong>create_geo_match_step2.sql</strong>. Ver GUIA_GEO.md.
         </p>
         <button
           type="button"

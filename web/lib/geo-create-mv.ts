@@ -31,9 +31,7 @@ $$ LANGUAGE PLPGSQL IMMUTABLE
 const SQL_CREATE_MV = `
 CREATE MATERIALIZED VIEW mv_familias_geo AS
 SELECT
-  f.d_cd_ibge,
   f.d_cod_familiar_fam,
-  f.d_nis_responsavel_fam,
   f.d_dat_cadastramento_fam,
   f.d_dat_atual_fam,
   f.d_nom_localidade_fam,
@@ -68,12 +66,12 @@ INNER JOIN tbl_geo g
 const SQL_CREATE_MV_POR_LOGRADOURO = `
 CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
 WITH candidatos AS (
-  SELECT f.d_cd_ibge, f.d_cod_familiar_fam,
+  SELECT f.d_cod_familiar_fam,
     f.d_nom_tip_logradouro_fam, f.d_nom_titulo_logradouro_fam, f.d_nom_logradouro_fam
   FROM mv_familias_limpa f
   WHERE f.d_num_cep_logradouro_fam IS NOT NULL
     AND EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
-    AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam)
+    AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cod_familiar_fam = f.d_cod_familiar_fam)
     AND norm_logradouro_para_match(
           CONCAT_WS(' ',
             NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
@@ -82,8 +80,7 @@ WITH candidatos AS (
           )
         ) IS NOT NULL
 )
-SELECT DISTINCT ON (c.d_cd_ibge, c.d_cod_familiar_fam)
-  c.d_cd_ibge,
+SELECT DISTINCT ON (c.d_cod_familiar_fam)
   c.d_cod_familiar_fam,
   g.cep                AS cep_geo,
   g.endereco           AS endereco_geo,
@@ -102,7 +99,7 @@ INNER JOIN tbl_geo g
         )
       ) = norm_logradouro_para_match(g.endereco)
   AND g.endereco IS NOT NULL
-ORDER BY c.d_cd_ibge, c.d_cod_familiar_fam, g.cep
+ORDER BY c.d_cod_familiar_fam, g.cep
 `.trim();
 
 export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -130,7 +127,7 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
     if (!mvFamiliasLimpa.rows.length) {
       await client.query('CREATE MATERIALIZED VIEW mv_familias_limpa AS SELECT * FROM vw_familias_limpa');
       await client.query(
-        'CREATE UNIQUE INDEX idx_mv_familias_limpa_fam ON mv_familias_limpa (d_cd_ibge, d_cod_familiar_fam)'
+        'CREATE UNIQUE INDEX idx_mv_familias_limpa_fam ON mv_familias_limpa (d_cod_familiar_fam)'
       );
     }
     await client.query('DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo_por_logradouro CASCADE');
@@ -138,14 +135,14 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
     await client.query('DROP VIEW IF EXISTS vw_familias_geo CASCADE');
     await client.query(SQL_CREATE_MV);
     await client.query(
-      'CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cd_ibge, d_cod_familiar_fam)'
+      'CREATE UNIQUE INDEX idx_mv_familias_geo_fam ON mv_familias_geo (d_cod_familiar_fam)'
     );
     await client.query(
       "COMMENT ON MATERIALIZED VIEW mv_familias_geo IS 'Famílias CADU com match na Geo (CEP + logradouro). Só entra quem bate na Geo. Traz cep_geo, endereco_geo, bairro_geo, cras_geo, creas_geo, lat_geo, long_geo. Via CEP/estratégias atualizam tbl_geo; refresh agrega mais famílias.'"
     );
     await client.query(SQL_CREATE_MV_POR_LOGRADOURO);
     await client.query(
-      'CREATE UNIQUE INDEX idx_mv_familias_geo_logradouro_fam ON mv_familias_geo_por_logradouro (d_cd_ibge, d_cod_familiar_fam)'
+      'CREATE UNIQUE INDEX idx_mv_familias_geo_logradouro_fam ON mv_familias_geo_por_logradouro (d_cod_familiar_fam)'
     );
     await client.query(
       "COMMENT ON MATERIALIZED VIEW mv_familias_geo_por_logradouro IS 'Só candidatos (CEP na Geo, sem match CEP+logradouro): match por logradouro. Corrige CEP genérico; execução rápida.'"
@@ -163,8 +160,8 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
         COALESCE(g1.lat_geo, g2.lat_geo) AS lat_territorio,
         COALESCE(g1.long_geo, g2.long_geo) AS long_territorio
       FROM mv_familias_limpa f
-      LEFT JOIN mv_familias_geo g1 ON g1.d_cd_ibge = f.d_cd_ibge AND g1.d_cod_familiar_fam = f.d_cod_familiar_fam
-      LEFT JOIN mv_familias_geo_por_logradouro g2 ON g2.d_cd_ibge = f.d_cd_ibge AND g2.d_cod_familiar_fam = f.d_cod_familiar_fam
+      LEFT JOIN mv_familias_geo g1 ON g1.d_cod_familiar_fam = f.d_cod_familiar_fam
+      LEFT JOIN mv_familias_geo_por_logradouro g2 ON g2.d_cod_familiar_fam = f.d_cod_familiar_fam
     `);
     return { ok: true };
   } catch (e) {

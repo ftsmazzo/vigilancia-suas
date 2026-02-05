@@ -17,7 +17,6 @@ export async function GET() {
   const sql = `
 WITH fam_24m AS (
   SELECT
-    f.d_cd_ibge,
     f.d_cod_familiar_fam,
     f.d_num_cep_logradouro_fam,
     norm_logradouro_para_match(CONCAT_WS(' ',
@@ -35,7 +34,6 @@ fam_com_cep AS (
 ),
 match_por_cep AS (
   SELECT
-    f.d_cd_ibge,
     f.d_cod_familiar_fam,
     MAX(CASE
       WHEN f.logradouro_cadu_norm = norm_logradouro_para_match(g.endereco)
@@ -45,7 +43,7 @@ match_por_cep AS (
   INNER JOIN tbl_geo g
     ON g.cep_norm = f.d_num_cep_logradouro_fam
     AND g.cep_norm IS NOT NULL
-  GROUP BY f.d_cd_ibge, f.d_cod_familiar_fam
+  GROUP BY f.d_cod_familiar_fam
 )
 SELECT
   (SELECT COUNT(*) FROM vw_familias_limpa) AS total_familias_cadastro,

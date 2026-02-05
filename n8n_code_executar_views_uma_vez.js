@@ -64,21 +64,18 @@ CREATE OR REPLACE FUNCTION norm_int(t TEXT) RETURNS INTEGER AS $$$$
   END;
 $$$$ LANGUAGE SQL IMMUTABLE;
 
+CREATE OR REPLACE FUNCTION norm_cod_familiar(t TEXT) RETURNS TEXT AS $$$$
+  SELECT NULLIF(LTRIM(TRIM(COALESCE(t, '')), '0'), '');
+$$$$ LANGUAGE SQL IMMUTABLE;
+
 DROP VIEW IF EXISTS vw_pessoas_limpa CASCADE;
 DROP VIEW IF EXISTS vw_familias_limpa CASCADE;
 DROP VIEW IF EXISTS v_cadu_pessoas CASCADE;
 DROP VIEW IF EXISTS v_cadu_familias CASCADE;
 
 CREATE VIEW vw_familias_limpa AS
-SELECT DISTINCT ON (r.d_cod_familiar_fam, r.d_cd_ibge)
-    norm_text(r.d_cd_ibge) AS d_cd_ibge,
-    norm_text(r.d_cod_familiar_fam) AS d_cod_familiar_fam,
-    (SELECT norm_nis(r2.p_num_nis_pessoa_atual)
-     FROM cadu_raw r2
-     WHERE r2.d_cod_familiar_fam = r.d_cod_familiar_fam
-       AND r2.d_cd_ibge = r.d_cd_ibge
-       AND NULLIF(TRIM(r2.p_cod_parentesco_rf_pessoa), '') = '1'
-     LIMIT 1) AS d_nis_responsavel_fam,
+SELECT DISTINCT ON (norm_cod_familiar(r.d_cod_familiar_fam))
+    norm_cod_familiar(r.d_cod_familiar_fam) AS d_cod_familiar_fam,
     norm_date(r.d_dat_cadastramento_fam) AS d_dat_cadastramento_fam,
     norm_date(r.d_dat_atual_fam) AS d_dat_atual_fam,
     norm_int(r.d_cod_est_cadastral_fam) AS d_cod_est_cadastral_fam,
@@ -95,13 +92,10 @@ SELECT DISTINCT ON (r.d_cod_familiar_fam, r.d_cd_ibge)
     norm_text(r.d_cod_unidade_territorial_fam) AS d_cod_unidade_territorial_fam,
     norm_text(r.d_nom_unidade_territorial_fam) AS d_nom_unidade_territorial_fam,
     norm_text(r.d_txt_referencia_local_fam) AS d_txt_referencia_local_fam,
-    norm_text(r.d_nom_entrevistador_fam) AS d_nom_entrevistador_fam,
-    norm_cpf(r.d_num_cpf_entrevistador_fam) AS d_num_cpf_entrevistador_fam,
     norm_num(r.d_vlr_renda_media_fam) AS d_vlr_renda_media_fam,
     norm_int(r.d_fx_rfpc) AS d_fx_rfpc,
     norm_num(r.d_vlr_renda_total_fam) AS d_vlr_renda_total_fam,
     norm_int(r.d_marc_pbf) AS d_marc_pbf,
-    norm_int(r.d_qtde_meses_desat_cat) AS d_qtde_meses_desat_cat,
     norm_int(r.d_cod_local_domic_fam) AS d_cod_local_domic_fam,
     norm_int(r.d_cod_especie_domic_fam) AS d_cod_especie_domic_fam,
     norm_int(r.d_qtd_comodos_domic_fam) AS d_qtd_comodos_domic_fam,
@@ -126,9 +120,6 @@ SELECT DISTINCT ON (r.d_cod_familiar_fam, r.d_cd_ibge)
     norm_text(r.d_nom_comunidade_quilombola_fam) AS d_nom_comunidade_quilombola_fam,
     norm_int(r.d_qtd_pessoas_domic_fam) AS d_qtd_pessoas_domic_fam,
     norm_int(r.d_qtd_familias_domic_fam) AS d_qtd_familias_domic_fam,
-    norm_int(r.d_qtd_pessoa_inter_0_17_anos_fam) AS d_qtd_pessoa_inter_0_17_anos_fam,
-    norm_int(r.d_qtd_pessoa_inter_18_64_anos_fam) AS d_qtd_pessoa_inter_18_64_anos_fam,
-    norm_int(r.d_qtd_pessoa_inter_65_anos_fam) AS d_qtd_pessoa_inter_65_anos_fam,
     norm_num(r.d_val_desp_energia_fam) AS d_val_desp_energia_fam,
     norm_num(r.d_val_desp_agua_esgoto_fam) AS d_val_desp_agua_esgoto_fam,
     norm_num(r.d_val_desp_gas_fam) AS d_val_desp_gas_fam,
@@ -144,31 +135,22 @@ SELECT DISTINCT ON (r.d_cod_familiar_fam, r.d_cd_ibge)
     norm_int(r.d_ind_risco_scl_inseg_alim) AS d_ind_risco_scl_inseg_alim,
     norm_phone(r.d_num_ddd_contato_1_fam) AS d_num_ddd_contato_1_fam,
     norm_phone(r.d_num_tel_contato_1_fam) AS d_num_tel_contato_1_fam,
-    norm_text(r.d_ic_tipo_contato_1_fam) AS d_ic_tipo_contato_1_fam,
-    norm_text(r.d_ic_envo_sms_contato_1_fam) AS d_ic_envo_sms_contato_1_fam,
-    norm_phone(r.d_num_tel_contato_2_fam) AS d_num_tel_contato_2_fam,
-    norm_phone(r.d_num_ddd_contato_2_fam) AS d_num_ddd_contato_2_fam,
-    norm_text(r.d_ic_tipo_contato_2_fam) AS d_ic_tipo_contato_2_fam,
-    norm_text(r.d_ic_envo_sms_contato_2_fam) AS d_ic_envo_sms_contato_2_fam,
-    norm_text(r.d_cod_cta_energ_unid_consum_fam) AS d_cod_cta_energ_unid_consum_fam,
     norm_text(r.d_ind_parc_mds_fam) AS d_ind_parc_mds_fam,
     norm_text(r.d_ref_cad) AS d_ref_cad,
     norm_text(r.d_ref_pbf) AS d_ref_pbf
 FROM cadu_raw r
-ORDER BY r.d_cod_familiar_fam, r.d_cd_ibge, r.id;
+ORDER BY norm_cod_familiar(r.d_cod_familiar_fam), r.id;
 
 CREATE VIEW vw_pessoas_limpa AS
 SELECT
     r.id,
     r.created_at,
-    norm_text(r.d_cod_familiar_fam) AS d_cod_familiar_fam,
-    norm_text(r.d_cd_ibge) AS d_cd_ibge,
-    norm_text(r.p_cod_familiar_fam) AS p_cod_familiar_fam,
+    norm_cod_familiar(r.p_cod_familiar_fam) AS p_cod_familiar_fam,
     norm_int(r.p_cod_est_cadastral_memb) AS p_cod_est_cadastral_memb,
     norm_int(r.p_ind_trabalho_infantil_pessoa) AS p_ind_trabalho_infantil_pessoa,
     norm_text(r.p_nom_pessoa) AS p_nom_pessoa,
     norm_nis(r.p_num_nis_pessoa_atual) AS p_num_nis_pessoa_atual,
-    norm_text(r.p_nom_apelido_pessoa) AS p_nom_apelido_pessoa,
+    norm_cpf(r.p_num_cpf_pessoa) AS p_num_cpf_pessoa,
     norm_int(r.p_cod_sexo_pessoa) AS p_cod_sexo_pessoa,
     norm_date(r.p_dta_nasc_pessoa) AS p_dta_nasc_pessoa,
     norm_int(r.p_cod_parentesco_rf_pessoa) AS p_cod_parentesco_rf_pessoa,
@@ -181,32 +163,9 @@ SELECT
     norm_text(r.p_cod_ibge_munic_nasc_pessoa) AS p_cod_ibge_munic_nasc_pessoa,
     norm_text(r.p_nom_pais_origem_pessoa) AS p_nom_pais_origem_pessoa,
     norm_text(r.p_cod_pais_origem_pessoa) AS p_cod_pais_origem_pessoa,
-    norm_int(r.p_cod_certidao_registrada_pessoa) AS p_cod_certidao_registrada_pessoa,
-    norm_text(r.p_fx_idade) AS p_fx_idade,
-    norm_int(r.p_marc_pbf) AS p_marc_pbf,
     norm_int(r.p_ind_identidade_genero) AS p_ind_identidade_genero,
     norm_int(r.p_ind_transgenero) AS p_ind_transgenero,
     norm_int(r.p_ind_tipo_identidade_genero) AS p_ind_tipo_identidade_genero,
-    norm_int(r.p_cod_certidao_civil_pessoa) AS p_cod_certidao_civil_pessoa,
-    norm_text(r.p_cod_livro_termo_certid_pessoa) AS p_cod_livro_termo_certid_pessoa,
-    norm_text(r.p_cod_folha_termo_certid_pessoa) AS p_cod_folha_termo_certid_pessoa,
-    norm_text(r.p_cod_termo_matricula_certid_pessoa) AS p_cod_termo_matricula_certid_pessoa,
-    norm_text(r.p_nom_munic_certid_pessoa) AS p_nom_munic_certid_pessoa,
-    norm_text(r.p_cod_ibge_munic_certid_pessoa) AS p_cod_ibge_munic_certid_pessoa,
-    norm_text(r.p_cod_cartorio_certid_pessoa) AS p_cod_cartorio_certid_pessoa,
-    norm_cpf(r.p_num_cpf_pessoa) AS p_num_cpf_pessoa,
-    norm_text(r.p_num_identidade_pessoa) AS p_num_identidade_pessoa,
-    norm_text(r.p_cod_complemento_pessoa) AS p_cod_complemento_pessoa,
-    norm_date(r.p_dta_emissao_ident_pessoa) AS p_dta_emissao_ident_pessoa,
-    norm_text(r.p_sig_uf_ident_pessoa) AS p_sig_uf_ident_pessoa,
-    norm_text(r.p_sig_orgao_emissor_pessoa) AS p_sig_orgao_emissor_pessoa,
-    norm_text(r.p_num_cart_trab_prev_soc_pessoa) AS p_num_cart_trab_prev_soc_pessoa,
-    norm_text(r.p_num_serie_trab_prev_soc_pessoa) AS p_num_serie_trab_prev_soc_pessoa,
-    norm_date(r.p_dta_emissao_cart_trab_pessoa) AS p_dta_emissao_cart_trab_pessoa,
-    norm_text(r.p_sig_uf_cart_trab_pessoa) AS p_sig_uf_cart_trab_pessoa,
-    norm_text(r.p_num_titulo_eleitor_pessoa) AS p_num_titulo_eleitor_pessoa,
-    norm_text(r.p_num_zona_tit_eleitor_pessoa) AS p_num_zona_tit_eleitor_pessoa,
-    norm_text(r.p_num_secao_tit_eleitor_pessoa) AS p_num_secao_tit_eleitor_pessoa,
     norm_int(r.p_cod_deficiencia_memb) AS p_cod_deficiencia_memb,
     norm_int(r.p_ind_def_cegueira_memb) AS p_ind_def_cegueira_memb,
     norm_int(r.p_ind_def_baixa_visao_memb) AS p_ind_def_baixa_visao_memb,
@@ -224,12 +183,6 @@ SELECT
     norm_int(r.p_ind_ajuda_outra_memb) AS p_ind_ajuda_outra_memb,
     norm_int(r.p_cod_sabe_ler_escrever_memb) AS p_cod_sabe_ler_escrever_memb,
     norm_int(r.p_ind_frequenta_escola_memb) AS p_ind_frequenta_escola_memb,
-    norm_text(r.p_nom_escola_memb) AS p_nom_escola_memb,
-    norm_int(r.p_cod_escola_local_memb) AS p_cod_escola_local_memb,
-    norm_text(r.p_sig_uf_escola_memb) AS p_sig_uf_escola_memb,
-    norm_text(r.p_nom_munic_escola_memb) AS p_nom_munic_escola_memb,
-    norm_text(r.p_cod_ibge_munic_escola_memb) AS p_cod_ibge_munic_escola_memb,
-    norm_text(r.p_cod_censo_inep_memb) AS p_cod_censo_inep_memb,
     norm_int(r.p_cod_curso_frequenta_memb) AS p_cod_curso_frequenta_memb,
     norm_int(r.p_cod_ano_serie_frequenta_memb) AS p_cod_ano_serie_frequenta_memb,
     norm_int(r.p_cod_curso_frequentou_pessoa_memb) AS p_cod_curso_frequentou_pessoa_memb,
@@ -294,13 +247,11 @@ SELECT
     norm_int(r.p_ind_dinh_vendas_memb) AS p_ind_dinh_vendas_memb,
     norm_int(r.p_ind_dinh_outro_memb) AS p_ind_dinh_outro_memb,
     norm_int(r.p_ind_dinh_nao_resp_memb) AS p_ind_dinh_nao_resp_memb,
-    norm_int(r.p_ind_atend_nenhum_memb) AS p_ind_atend_nenhum_memb,
-    norm_text(r.p_ref_cad) AS p_ref_cad,
-    norm_text(r.p_ref_pbf) AS p_ref_pbf
+    norm_int(r.p_ind_atend_nenhum_memb) AS p_ind_atend_nenhum_memb
 FROM cadu_raw r;
 
-COMMENT ON VIEW vw_familias_limpa IS 'Uma linha por família (CADU). Inclui d_nis_responsavel_fam (NIS do RF, cod_parentesco_rf=1). Colunas d_* normalizadas. Recriar a cada upload.';
-COMMENT ON VIEW vw_pessoas_limpa IS 'Uma linha por pessoa (CADU). Colunas p_* + chave família normalizadas. Cruzar com tbl_codigos_cadu para descritivos. Recriar a cada upload.';
+COMMENT ON VIEW vw_familias_limpa IS 'Uma linha por família (CADU). Chave: d_cod_familiar_fam. Uso: um município. Colunas d_* essenciais normalizadas. Recriar a cada upload.';
+COMMENT ON VIEW vw_pessoas_limpa IS 'Uma linha por pessoa (CADU). Chave família: p_cod_familiar_fam. Sem IBGE, sem certidão/documentos. Colunas p_* essenciais normalizadas. Recriar a cada upload.';
 `;
 
 return [{ json: { sql: SQL_VIEWS.trim() } }];

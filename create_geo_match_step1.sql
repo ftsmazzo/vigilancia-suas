@@ -46,9 +46,7 @@ DROP VIEW IF EXISTS vw_familias_geo CASCADE;
 -- Esta parte é a que demora (join completo). Aguarde até concluir.
 CREATE MATERIALIZED VIEW mv_familias_geo AS
 SELECT
-  f.d_cd_ibge,
   f.d_cod_familiar_fam,
-  f.d_nis_responsavel_fam,
   f.d_dat_cadastramento_fam,
   f.d_dat_atual_fam,
   f.d_nom_localidade_fam,
@@ -82,12 +80,12 @@ INNER JOIN tbl_geo g
 -- Segunda MV: só candidatos (CEP na Geo, sem match CEP+logradouro) — match por logradouro (rápido).
 CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
 WITH candidatos AS (
-  SELECT f.d_cd_ibge, f.d_cod_familiar_fam,
+  SELECT f.d_cod_familiar_fam,
     f.d_nom_tip_logradouro_fam, f.d_nom_titulo_logradouro_fam, f.d_nom_logradouro_fam
   FROM mv_familias_limpa f
   WHERE f.d_num_cep_logradouro_fam IS NOT NULL
     AND EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
-    AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam)
+    AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cod_familiar_fam = f.d_cod_familiar_fam)
     AND norm_logradouro_para_match(
           CONCAT_WS(' ',
             NULLIF(TRIM(COALESCE(f.d_nom_tip_logradouro_fam, '')), ''),
@@ -96,8 +94,7 @@ WITH candidatos AS (
           )
         ) IS NOT NULL
 )
-SELECT DISTINCT ON (c.d_cd_ibge, c.d_cod_familiar_fam)
-  c.d_cd_ibge,
+SELECT DISTINCT ON (c.d_cod_familiar_fam)
   c.d_cod_familiar_fam,
   g.cep                AS cep_geo,
   g.endereco           AS endereco_geo,
@@ -116,4 +113,4 @@ INNER JOIN tbl_geo g
         )
       ) = norm_logradouro_para_match(g.endereco)
   AND g.endereco IS NOT NULL
-ORDER BY c.d_cd_ibge, c.d_cod_familiar_fam, g.cep;
+ORDER BY c.d_cod_familiar_fam, g.cep;

@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     pessoaParams.push(...p.vals);
   }
 
-  const join = 'f.d_cd_ibge = p.d_cd_ibge AND f.d_cod_familiar_fam = p.d_cod_familiar_fam';
+  const join = 'f.d_cod_familiar_fam = p.p_cod_familiar_fam';
   const hasFamFilters = famConditions.length > 0;
   const hasPessoaFilters = pessoaConditions.length > 0;
 
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       const whereClause = `WHERE ${allConditions.join(' AND ')}`;
       const sqlFam =
         `SELECT COUNT(*) AS c FROM (` +
-        `SELECT DISTINCT f.d_cd_ibge, f.d_cod_familiar_fam FROM vw_familias_territorio f ` +
+        `SELECT DISTINCT f.d_cod_familiar_fam FROM vw_familias_territorio f ` +
         `INNER JOIN vw_pessoas_limpa p ON ${join} ${whereClause}` +
         `) t`;
       const resFam = await query<{ c: string }>(sqlFam, allParams);

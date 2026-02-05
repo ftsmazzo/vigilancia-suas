@@ -95,9 +95,7 @@ COMMENT ON MATERIALIZED VIEW mv_folha_canc IS 'Um registro por família em Cance
 -- -----------------------------------------------------------------------------
 CREATE MATERIALIZED VIEW mv_folha_familias AS
 SELECT
-  fam.d_cd_ibge           AS ibge,
-  fam.d_cod_familiar_fam  AS cod_familiar,
-  fam.d_nis_responsavel_fam,
+  fam.d_cod_familiar_fam               AS cod_familiar,
   fam.d_nom_titulo_logradouro_fam,
   fam.d_nom_logradouro_fam,
   fam.d_num_logradouro_fam,
@@ -108,21 +106,20 @@ SELECT
   fam.d_num_tel_contato_1_fam,
   COALESCE(rf.p_num_cpf_pessoa, pri.p_num_cpf_pessoa)     AS rf_cpf,
   COALESCE(rf.p_nom_pessoa, pri.p_nom_pessoa)             AS rf_nome,
-  COALESCE(fam.d_nis_responsavel_fam, pri.p_num_nis_pessoa_atual) AS nis_fam
+  COALESCE(rf.p_num_nis_pessoa_atual, pri.p_num_nis_pessoa_atual) AS nis_fam
 FROM vw_familias_limpa fam
 LEFT JOIN vw_pessoas_limpa rf
-  ON rf.d_cd_ibge = fam.d_cd_ibge
- AND rf.d_cod_familiar_fam = fam.d_cod_familiar_fam
+  ON rf.p_cod_familiar_fam = fam.d_cod_familiar_fam
  AND rf.p_cod_parentesco_rf_pessoa = 1
 LEFT JOIN LATERAL (
   SELECT p_num_cpf_pessoa, p_nom_pessoa, p_num_nis_pessoa_atual
   FROM vw_pessoas_limpa p2
-  WHERE p2.d_cd_ibge = fam.d_cd_ibge AND p2.d_cod_familiar_fam = fam.d_cod_familiar_fam
+  WHERE p2.p_cod_familiar_fam = fam.d_cod_familiar_fam
   ORDER BY p2.id
   LIMIT 1
 ) pri ON rf.p_num_cpf_pessoa IS NULL;
 
-CREATE UNIQUE INDEX idx_mv_folha_familias_key ON mv_folha_familias (ibge, cod_familiar);
+CREATE UNIQUE INDEX idx_mv_folha_familias_key ON mv_folha_familias (cod_familiar);
 COMMENT ON MATERIALIZED VIEW mv_folha_familias IS 'Familias_limpa + CPF/nome do RF (ou primeira pessoa quando não há RF).';
 
 -- -----------------------------------------------------------------------------
@@ -161,7 +158,7 @@ FROM mv_folha_base b
 LEFT JOIN mv_folha_linhas fl
   ON fl.ibge = b.ibge AND fl.cod_familiar = b.cod_familiar
 LEFT JOIN mv_folha_familias fam
-  ON fam.ibge = b.ibge AND fam.cod_familiar = b.cod_familiar
+  ON fam.cod_familiar = b.cod_familiar
 LEFT JOIN mv_folha_bloq bl
   ON bl.ibge = b.ibge AND bl.cod_familiar = b.cod_familiar
 LEFT JOIN mv_folha_canc c

@@ -107,7 +107,7 @@ SELECT cpf_sanit, nis, ibge, cod_familiar, sit_fam, motivo_bloqueio, motivo_canc
   INNER JOIN mv_familia_situacao fs
     ON fs.ibge = NULLIF(TRIM(c.ibge), '') AND fs.cod_familiar = norm_cod_familiar(c.cod_familiar)
   INNER JOIN vw_pessoas_limpa p
-    ON p.d_cd_ibge = NULLIF(TRIM(c.ibge), '') AND p.d_cod_familiar_fam = norm_cod_familiar(c.cod_familiar)
+    ON p.p_cod_familiar_fam = norm_cod_familiar(c.cod_familiar)
   WHERE NULLIF(TRIM(c.ibge), '') IS NOT NULL AND norm_cod_familiar(c.cod_familiar) IS NOT NULL
     AND NULLIF(REGEXP_REPLACE(TRIM(COALESCE(p.p_num_cpf_pessoa, '')), '[^0-9]', '', 'g'), '') IS NOT NULL
 ) t;

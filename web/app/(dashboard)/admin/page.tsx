@@ -82,6 +82,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<{ role: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshLoading, setRefreshLoading] = useState<string | null>(null);
+  const [createLoading, setCreateLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
@@ -119,6 +120,24 @@ export default function AdminPage() {
     }
   }
 
+  async function runCreate(script: string) {
+    setCreateLoading(script);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/create/${script}`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage({ type: 'err', text: data.error || `Falha ao executar ${script}.` });
+        return;
+      }
+      setMessage({ type: 'ok', text: data.message || 'Concluído.' });
+    } catch {
+      setMessage({ type: 'err', text: 'Erro de conexão.' });
+    } finally {
+      setCreateLoading(null);
+    }
+  }
+
   if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-[200px] text-slate-500">
@@ -149,9 +168,57 @@ export default function AdminPage() {
       )}
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-2">Atualizar views materializadas</h2>
+        <h2 className="font-medium text-slate-800 mb-2">Criar/recriar estrutura (views e MVs)</h2>
+        <p className="text-sm text-slate-500 mb-2">
+          Use quando as views ou MVs não existirem ou após mudar a estrutura. <strong>Ordem recomendada:</strong> 1 → 2 → depois Geo (na página Geolocalização) → 3 → 4.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => runCreate('views-cadu')}
+            disabled={!!createLoading}
+            className="btn-primary disabled:opacity-50 text-sm"
+          >
+            {createLoading === 'views-cadu' ? 'Executando…' : '1. Views CADU'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runCreate('mv-familias-limpa')}
+            disabled={!!createLoading}
+            className="btn-primary disabled:opacity-50 text-sm"
+          >
+            {createLoading === 'mv-familias-limpa' ? 'Executando…' : '2. mv_familias_limpa'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runCreate('folha-rf')}
+            disabled={!!createLoading}
+            className="btn-secondary disabled:opacity-50 text-sm"
+          >
+            {createLoading === 'folha-rf' ? 'Executando…' : '3. Folha RF'}
+          </button>
+          <button
+            type="button"
+            onClick={() => runCreate('familia-cpf-visitas')}
+            disabled={!!createLoading}
+            className="btn-secondary disabled:opacity-50 text-sm"
+          >
+            {createLoading === 'familia-cpf-visitas' ? 'Executando…' : '4. Família/CPF/Visitas'}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500">
+          Views CADU = vw_familias_limpa e vw_pessoas_limpa. Depois de 1 e 2, vá em{' '}
+          <Link href="/admin/geolocalizacao" className="text-primary-600 hover:underline">
+            Geolocalização
+          </Link>
+          {' '}e clique em &quot;Criar/recriar mv_familias_geo&quot;. Depois volte aqui e execute 3 e 4.
+        </p>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Atualizar views materializadas (refresh)</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Execute após carregar Folha, Bloqueados, Cancelados, CADU ou Visitas. Assim as views ficam alinhadas com os dados.
+          Execute após carregar Folha, Bloqueados, Cancelados, CADU ou Visitas. Só repopula as MVs já criadas; não recria a estrutura.
         </p>
         <div className="flex flex-wrap gap-3">
           <button
@@ -188,7 +255,7 @@ export default function AdminPage() {
           </button>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          &quot;Atualizar todas as views&quot; roda em sequência: mv_familia_situacao, mv_cpf_familia_situacao, 5 MVs da Folha RF e as duas MVs Geo (mv_familias_geo, mv_familias_geo_por_logradouro). Ver ESTRUTURA_BANCO_VIEWS.md no repositório.
+          Refresh repopula: mv_familia_situacao, mv_cpf_familia_situacao, 5 MVs Folha RF, mv_familias_limpa, mv_familias_geo, mv_familias_geo_por_logradouro.
         </p>
       </section>
 
