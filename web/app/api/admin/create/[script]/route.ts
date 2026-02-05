@@ -7,6 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Folha RF e outros scripts podem levar >30 min; 2h para não cortar a requisição HTTP
+export const maxDuration = 7200;
 import { getSession } from '@/lib/auth';
 import pool from '@/lib/db';
 import {
@@ -48,7 +51,7 @@ export async function POST(
 
   const client = await pool.connect();
   try {
-    await client.query("SET statement_timeout = '1800000'"); // 30 min por script
+    await client.query("SET statement_timeout = '7200000'"); // 2h (ms) – Folha RF e familia-cpf-visitas podem demorar
     await client.query(trimmed);
     return NextResponse.json({
       ok: true,
