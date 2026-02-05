@@ -70,6 +70,8 @@ O script faz um join pesado; em bases grandes pode dar **timeout**. Faça assim:
 1. Aumente o timeout do PGAdmin como acima.
 2. Execute **create_geo_match.sql** inteiro (já inclui `SET statement_timeout = '0'` para o servidor).
 
+**Antes:** execute **create_mv_familias_limpa.sql** (uma vez). O match Geo lê de **mv_familias_limpa** em vez da view pesada; o refresh fica bem mais rápido. Se você usar o botão "Criar/recriar mv_familias_geo" na aplicação, a própria app cria a `mv_familias_limpa` se ainda não existir.
+
 Isso cria:
 
 - **norm_logradouro_para_match(t)** – normaliza endereço para comparação.

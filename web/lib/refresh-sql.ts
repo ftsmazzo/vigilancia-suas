@@ -17,6 +17,7 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_folha_familias;
 `.trim();
 
 export const REFRESH_GEO = `
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_limpa;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_familias_geo_por_logradouro;
 `.trim();

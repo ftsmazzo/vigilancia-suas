@@ -54,10 +54,11 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 
 | Objeto | Tipo | Script | Precisa refresh? |
 |--------|------|--------|-------------------|
-| `vw_familias_limpa` | VIEW | `create_views_cadu.sql` | Não (view normal) |
+| `vw_familias_limpa` | VIEW | `create_views_cadu.sql` | Não (view normal; pesada para Power BI) |
 | `vw_pessoas_limpa` | VIEW | `create_views_cadu.sql` | Não |
+| `mv_familias_limpa` | MATERIALIZED VIEW | `create_mv_familias_limpa.sql` | **Sim** (para Power BI use esta em vez da view) |
 
-**Ordem:** Rodar `create_views_cadu.sql` **depois** da primeira carga do CADU (e quando houver alteração de estrutura). Contém também as funções de normalização (`norm_cpf`, `norm_cod_familiar`, etc.).
+**Ordem:** Rodar `create_views_cadu.sql` **depois** da primeira carga do CADU. Para Power BI não dar timeout em “famílias”, rodar **create_mv_familias_limpa.sql** uma vez; depois o refresh de `mv_familias_limpa` entra no “Atualizar todas as views”. Contém também as funções de normalização (`norm_cpf`, `norm_cod_familiar`, etc.).
 
 ### 3.2 Família / CPF / Visitas (dependem de CADU + SIBEC + visitas_raw)
 
@@ -68,7 +69,7 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 | `vw_cpf_situacao` | VIEW | `create_view_familia_cpf_visitas.sql` | Não |
 | `vw_filtro_controle` | VIEW | `create_view_familia_cpf_visitas.sql` | Não |
 
-**Refresh:** `refresh_familia_cpf_visitas.sql` → `REFRESH MATERIALIZED VIEW mv_familia_situacao;` e `mv_cpf_familia_situacao`.
+**Refresh:** `refresh_familia_cpf_visitas.sql` (ou painel) → `REFRESH MATERIALIZED VIEW mv_familia_situacao;` e `mv_cpf_familia_situacao`. A `mv_familias_limpa` é atualizada no bloco **Geo** (junto com as MVs de match), pois o match lê dela.
 
 ### 3.3 Folha RF (dependem de CADU + SIBEC)
 
@@ -94,7 +95,7 @@ Cada extração corresponde a um arquivo/tabela. A carga pode ser feita via **N8
 
 **Ordem:** criar `tbl_geo`, carregar geo.csv (upload na página Geolocalização) e rodar `create_geo_match.sql` no banco. Depois: **Atualizar match Geo** no painel após cada upload de Geo ou CADU. **vw_familias_territorio** = todas as famílias: primeiro match CEP+logradouro (mv_familias_geo), senão match só por logradouro (mv_familias_geo_por_logradouro) — assim o CEP da Geo corrige “CEP genérico” sem alterar cadastro e sem Via CEP. Use esta view no sistema (dashboard, bairro, CRAS, consultas). Nenhuma família fica fora do cruzamento.
 
-**Refresh:** painel → ação **geo** → `REFRESH CONCURRENTLY mv_familias_geo` e `REFRESH CONCURRENTLY mv_familias_geo_por_logradouro`.
+**Refresh:** painel → ação **geo** → primeiro `REFRESH CONCURRENTLY mv_familias_limpa`, depois `mv_familias_geo` e `mv_familias_geo_por_logradouro`. O match lê de `mv_familias_limpa` (não da view), por isso o refresh fica mais rápido.
 
 **Views normais** (vw_familias_limpa, vw_pessoas_limpa, vw_cpf_situacao, vw_filtro_controle, vw_folha_rf) são atualizadas automaticamente. As **materialized views** (mv_*) precisam de refresh após nova carga.
 

@@ -20,7 +20,7 @@ SELECT
   COALESCE(g1.creas_geo, g2.creas_geo)         AS creas_territorio,
   COALESCE(g1.lat_geo, g2.lat_geo)             AS lat_territorio,
   COALESCE(g1.long_geo, g2.long_geo)           AS long_territorio
-FROM vw_familias_limpa f
+FROM mv_familias_limpa f
 LEFT JOIN mv_familias_geo g1 ON g1.d_cd_ibge = f.d_cd_ibge AND g1.d_cod_familiar_fam = f.d_cod_familiar_fam
 LEFT JOIN mv_familias_geo_por_logradouro g2 ON g2.d_cd_ibge = f.d_cd_ibge AND g2.d_cod_familiar_fam = f.d_cod_familiar_fam;
 

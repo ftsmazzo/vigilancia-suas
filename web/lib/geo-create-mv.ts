@@ -51,7 +51,7 @@ SELECT
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
   'alto'::TEXT         AS confianca_match
-FROM vw_familias_limpa f
+FROM mv_familias_limpa f
 INNER JOIN tbl_geo g
   ON g.cep_norm = f.d_num_cep_logradouro_fam
   AND f.d_num_cep_logradouro_fam IS NOT NULL
@@ -70,7 +70,7 @@ CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
 WITH candidatos AS (
   SELECT f.d_cd_ibge, f.d_cod_familiar_fam,
     f.d_nom_tip_logradouro_fam, f.d_nom_titulo_logradouro_fam, f.d_nom_logradouro_fam
-  FROM vw_familias_limpa f
+  FROM mv_familias_limpa f
   WHERE f.d_num_cep_logradouro_fam IS NOT NULL
     AND EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
     AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam)
@@ -124,6 +124,15 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
         ON tbl_geo (norm_logradouro_para_match(endereco))
         WHERE endereco IS NOT NULL
     `);
+    const mvFamiliasLimpa = await client.query(
+      "SELECT 1 FROM pg_matviews WHERE schemaname = 'public' AND matviewname = 'mv_familias_limpa'"
+    );
+    if (!mvFamiliasLimpa.rows.length) {
+      await client.query('CREATE MATERIALIZED VIEW mv_familias_limpa AS SELECT * FROM vw_familias_limpa');
+      await client.query(
+        'CREATE UNIQUE INDEX idx_mv_familias_limpa_fam ON mv_familias_limpa (d_cd_ibge, d_cod_familiar_fam)'
+      );
+    }
     await client.query('DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo_por_logradouro CASCADE');
     await client.query('DROP MATERIALIZED VIEW IF EXISTS mv_familias_geo CASCADE');
     await client.query('DROP VIEW IF EXISTS vw_familias_geo CASCADE');
@@ -153,7 +162,7 @@ export async function runCreateGeoMv(): Promise<{ ok: true } | { ok: false; erro
         COALESCE(g1.creas_geo, g2.creas_geo) AS creas_territorio,
         COALESCE(g1.lat_geo, g2.lat_geo) AS lat_territorio,
         COALESCE(g1.long_geo, g2.long_geo) AS long_territorio
-      FROM vw_familias_limpa f
+      FROM mv_familias_limpa f
       LEFT JOIN mv_familias_geo g1 ON g1.d_cd_ibge = f.d_cd_ibge AND g1.d_cod_familiar_fam = f.d_cod_familiar_fam
       LEFT JOIN mv_familias_geo_por_logradouro g2 ON g2.d_cd_ibge = f.d_cd_ibge AND g2.d_cod_familiar_fam = f.d_cod_familiar_fam
     `);

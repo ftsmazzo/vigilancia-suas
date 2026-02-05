@@ -54,7 +54,7 @@ export async function runRefreshStatements(scripts: string[]): Promise<{
       if (!trimmed) continue;
       const match = trimmed.match(REFRESH_MV_NAME);
       const name = match ? match[1] : trimmed.slice(0, 50);
-      if (name === 'mv_familias_geo' || name === 'mv_familias_geo_por_logradouro') {
+      if (name === 'mv_familias_geo' || name === 'mv_familias_geo_por_logradouro' || name === 'mv_familias_limpa') {
         const exists = await client.query(
           "SELECT 1 FROM pg_matviews WHERE schemaname = 'public' AND matviewname = $1",
           [name]
@@ -70,7 +70,7 @@ export async function runRefreshStatements(scripts: string[]): Promise<{
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
         if (
-          (name === 'mv_familias_geo' || name === 'mv_familias_geo_por_logradouro') &&
+          (name === 'mv_familias_geo' || name === 'mv_familias_geo_por_logradouro' || name === 'mv_familias_limpa') &&
           (errMsg.includes('unique index') || errMsg.includes('CONCURRENTLY'))
         ) {
           try {

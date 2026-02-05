@@ -66,7 +66,7 @@ SELECT
   g.lat_num            AS lat_geo,
   g.long_num           AS long_geo,
   'alto'::TEXT         AS confianca_match
-FROM vw_familias_limpa f
+FROM mv_familias_limpa f
 INNER JOIN tbl_geo g
   ON g.cep_norm = f.d_num_cep_logradouro_fam
   AND f.d_num_cep_logradouro_fam IS NOT NULL
@@ -84,7 +84,7 @@ CREATE MATERIALIZED VIEW mv_familias_geo_por_logradouro AS
 WITH candidatos AS (
   SELECT f.d_cd_ibge, f.d_cod_familiar_fam,
     f.d_nom_tip_logradouro_fam, f.d_nom_titulo_logradouro_fam, f.d_nom_logradouro_fam
-  FROM vw_familias_limpa f
+  FROM mv_familias_limpa f
   WHERE f.d_num_cep_logradouro_fam IS NOT NULL
     AND EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
     AND NOT EXISTS (SELECT 1 FROM mv_familias_geo m WHERE m.d_cd_ibge = f.d_cd_ibge AND m.d_cod_familiar_fam = f.d_cod_familiar_fam)
