@@ -5,7 +5,8 @@ import { getRefreshSql, type RefreshAction } from '@/lib/refresh-sql';
 
 const VALID_ACTIONS: RefreshAction[] = ['familia_cpf_visitas', 'folha_rf', 'geo', 'todas'];
 
-export const maxDuration = 1800;
+// Geo refresh pode levar >30 min em bases grandes; 2h para evitar timeout
+export const maxDuration = 7200;
 
 export async function POST(request: NextRequest) {
   const user = await getSession();

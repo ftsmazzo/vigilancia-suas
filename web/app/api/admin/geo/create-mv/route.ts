@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession, requireAdmin } from '@/lib/auth';
 import { runCreateGeoMv } from '@/lib/geo-create-mv';
 
-export const maxDuration = 1800;
+// Criação das MVs Geo pode levar >30 min; 2h para evitar timeout
+export const maxDuration = 7200;
 
 export async function POST() {
   const user = await getSession();

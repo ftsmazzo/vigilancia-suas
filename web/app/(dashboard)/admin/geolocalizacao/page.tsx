@@ -65,12 +65,14 @@ export default function GeolocalizacaoPage() {
     }
   }
 
+  const GEO_REQUEST_MS = 7200000; // 2h — refresh/criar MVs pode levar muito em base grande
+
   async function runRefreshGeo() {
     setRefreshMsg(null);
     setRefreshLoading(true);
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1800000);
+      const timeout = setTimeout(() => controller.abort(), GEO_REQUEST_MS);
       const res = await fetch('/api/admin/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,7 +89,7 @@ export default function GeolocalizacaoPage() {
     } catch (e) {
       const msg =
         e instanceof Error && e.name === 'AbortError'
-          ? 'Tempo esgotado (30 min). Tente novamente.'
+          ? 'Tempo esgotado (2 h). Tente novamente ou rode o refresh no PGAdmin (GUIA_GEO.md).'
           : 'Erro de conexão.';
       setRefreshMsg({ type: 'err', text: msg });
     } finally {
@@ -119,7 +121,7 @@ export default function GeolocalizacaoPage() {
     setCreateMvLoading(true);
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1800000);
+      const timeout = setTimeout(() => controller.abort(), GEO_REQUEST_MS);
       const res = await fetch('/api/admin/geo/create-mv', {
         method: 'POST',
         signal: controller.signal,
@@ -134,7 +136,7 @@ export default function GeolocalizacaoPage() {
     } catch (e) {
       const msg =
         e instanceof Error && e.name === 'AbortError'
-          ? 'Tempo esgotado (30 min). Verifique no Postgres se mv_familias_geo já foi criada — o servidor pode ter terminado depois. Se existir, use "Atualizar match Geo". Senão, tente de novo ou use psql (GUIA_GEO.md).'
+          ? 'Tempo esgotado (2 h). Verifique no Postgres se as MVs já existem — o servidor pode ter terminado depois. Se existirem, use "Atualizar match Geo". Senão, rode create_geo_match_step1.sql e step2 no PGAdmin/psql (GUIA_GEO.md).'
           : 'Erro de conexão.';
       setCreateMvMsg({ type: 'err', text: msg });
     } finally {
@@ -227,7 +229,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Criar ou recriar mv_familias_geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero. Pode demorar vários minutos (até 30 min) — não feche a página. Se aparecer &quot;Tempo esgotado&quot;, confira no Postgres se a MV já existe (o servidor pode ter terminado depois).
+          Use este botão quando a materialized view ainda não existir ou quando quiser recriá-la do zero. Pode demorar <strong>até 2 horas</strong> em base grande — não feche a página. Se der timeout mesmo assim, rode no PGAdmin (ou psql): <strong>create_geo_match_step1.sql</strong>, aguarde terminar, depois <strong>create_geo_match_step2.sql</strong>. Ver GUIA_GEO.md.
         </p>
         <button
           type="button"
@@ -242,7 +244,7 @@ export default function GeolocalizacaoPage() {
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Atualizar match Geo</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Atualiza <strong>mv_familias_geo</strong> (base toda; pode levar <strong>5–15 min</strong>) e <strong>mv_familias_geo_por_logradouro</strong> (só candidatos — rápido). O mesmo botão aparece acima, dentro do resultado da análise, para ver o escopo antes. Execute após upload de Geo ou CADU.
+          Atualiza <strong>mv_familias_geo</strong> (base toda; pode levar <strong>até 2 h</strong> em base grande) e <strong>mv_familias_geo_por_logradouro</strong> (só candidatos — rápido). O mesmo botão aparece acima, dentro do resultado da análise. Se der timeout, rode no PGAdmin: <code className="text-xs">REFRESH MATERIALIZED VIEW mv_familias_geo;</code> e <code className="text-xs">REFRESH MATERIALIZED VIEW mv_familias_geo_por_logradouro;</code>
         </p>
         <button
           type="button"
