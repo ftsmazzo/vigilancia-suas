@@ -25,6 +25,14 @@ export default function GeolocalizacaoPage() {
     endereco_divergente_24m: number;
   } | null>(null);
   const [analiseErr, setAnaliseErr] = useState<string | null>(null);
+  const [matchStats, setMatchStats] = useState<{
+    total_mv_familias_geo: number | null;
+    total_mv_familias_geo_por_logradouro: number | null;
+    total_com_territorio: number | null;
+    total_familias_cadastro: number | null;
+    error?: string;
+  } | null>(null);
+  const [matchStatsLoading, setMatchStatsLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -86,6 +94,16 @@ export default function GeolocalizacaoPage() {
         return;
       }
       setRefreshMsg({ type: 'ok', text: data.message || 'Match Geo atualizado.' });
+      if (data.geo_stats) {
+        setMatchStats({
+          total_mv_familias_geo: data.geo_stats.total_mv_familias_geo,
+          total_mv_familias_geo_por_logradouro: data.geo_stats.total_mv_familias_geo_por_logradouro,
+          total_com_territorio: data.geo_stats.total_com_territorio,
+          total_familias_cadastro: data.geo_stats.total_familias_cadastro,
+        });
+      } else {
+        fetchMatchStats();
+      }
     } catch (e) {
       const msg =
         e instanceof Error && e.name === 'AbortError'
@@ -94,6 +112,26 @@ export default function GeolocalizacaoPage() {
       setRefreshMsg({ type: 'err', text: msg });
     } finally {
       setRefreshLoading(false);
+    }
+  }
+
+  async function fetchMatchStats() {
+    setMatchStatsLoading(true);
+    setMatchStats(null);
+    try {
+      const res = await fetch('/api/data/geo-match-stats');
+      const data = await res.json().catch(() => ({}));
+      setMatchStats({
+        total_mv_familias_geo: data.total_mv_familias_geo ?? null,
+        total_mv_familias_geo_por_logradouro: data.total_mv_familias_geo_por_logradouro ?? null,
+        total_com_territorio: data.total_com_territorio ?? null,
+        total_familias_cadastro: data.total_familias_cadastro ?? null,
+        error: data.error ?? undefined,
+      });
+    } catch {
+      setMatchStats({ total_mv_familias_geo: null, total_mv_familias_geo_por_logradouro: null, total_com_territorio: null, total_familias_cadastro: null, error: 'Erro ao carregar.' });
+    } finally {
+      setMatchStatsLoading(false);
     }
   }
 
@@ -178,6 +216,37 @@ export default function GeolocalizacaoPage() {
           {(uploadMsg ?? refreshMsg ?? createMvMsg)?.text}
         </div>
       )}
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Resultado do match Geo</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Contagens reais das materialized views após &quot;Atualizar match Geo&quot;. São esses números que o sistema usa (vw_familias_territorio). A <strong>Análise 24m</strong> abaixo é só diagnóstico (recalcula na hora e não usa as MVs).
+        </p>
+        <button
+          type="button"
+          onClick={fetchMatchStats}
+          disabled={matchStatsLoading}
+          className="btn-primary disabled:opacity-50 mb-4"
+        >
+          {matchStatsLoading ? 'Carregando…' : 'Ver resultado do match'}
+        </button>
+        {matchStats?.error && (
+          <p className="text-sm text-amber-700 mb-2">{matchStats.error}</p>
+        )}
+        {matchStats && !matchStats.error && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 text-sm">
+            <ul className="space-y-1 text-slate-600">
+              <li><strong>Total famílias no cadastro:</strong> {matchStats.total_familias_cadastro != null ? matchStats.total_familias_cadastro.toLocaleString('pt-BR') : '—'}</li>
+              <li><strong>Match CEP + logradouro (mv_familias_geo):</strong> {matchStats.total_mv_familias_geo != null ? matchStats.total_mv_familias_geo.toLocaleString('pt-BR') : '—'}</li>
+              <li><strong>Match só logradouro (candidatos):</strong> {matchStats.total_mv_familias_geo_por_logradouro != null ? matchStats.total_mv_familias_geo_por_logradouro.toLocaleString('pt-BR') : '—'}</li>
+              <li><strong>Total com território (usado no sistema):</strong> <span className="font-medium text-slate-800">{matchStats.total_com_territorio != null ? matchStats.total_com_territorio.toLocaleString('pt-BR') : '—'}</span></li>
+            </ul>
+            <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-200">
+              O match é <strong>exato</strong> após normalização (maiúsculas, sem acento, abreviações como R. → RUA). <strong>Erros de grafia</strong> (ex.: Braisl vs Brasil) impedem match; padronize na base Geo ou no cadastro para melhorar.
+            </p>
+          </div>
+        )}
+      </section>
 
       <section className="card p-6">
         <h2 className="font-medium text-slate-800 mb-2">Análise CEP × logradouro (últimos 24 meses)</h2>
