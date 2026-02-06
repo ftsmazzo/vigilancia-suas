@@ -115,6 +115,30 @@ export default function GeolocalizacaoPage() {
     }
   }
 
+  async function downloadSemTerritorio() {
+    try {
+      const res = await fetch('/api/data/geo-sem-territorio');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRefreshMsg({ type: 'err', text: data.error || 'Falha ao exportar.' });
+        return;
+      }
+      const rows = data.rows as Array<{ cod_familiar: string; cep: string; endereco: string; bairro: string }>;
+      const header = 'cod_familiar;cep;endereco;bairro\n';
+      const body = rows.map((r) => [r.cod_familiar ?? '', r.cep ?? '', (r.endereco ?? '').replace(/"/g, '""'), r.bairro ?? ''].map((c) => `"${c}"`).join(';')).join('\n');
+      const csv = '\uFEFF' + header + body; // BOM para Excel
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `familias_sem_territorio_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setRefreshMsg({ type: 'err', text: 'Erro ao gerar CSV.' });
+    }
+  }
+
   async function fetchMatchStats() {
     setMatchStatsLoading(true);
     setMatchStats(null);
@@ -244,6 +268,27 @@ export default function GeolocalizacaoPage() {
             <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-200">
               O match é <strong>exato</strong> após normalização (maiúsculas, sem acento, abreviações como R. → RUA). <strong>Erros de grafia</strong> (ex.: Braisl vs Brasil) impedem match; padronize na base Geo ou no cadastro para melhorar.
             </p>
+            {matchStats.total_familias_cadastro != null && matchStats.total_com_territorio != null && matchStats.total_familias_cadastro > matchStats.total_com_territorio && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="font-medium text-slate-700 mb-2">O que fazer com os endereços sem território</p>
+                <p className="text-sm text-slate-600 mb-3">
+                  <strong>{(matchStats.total_familias_cadastro - matchStats.total_com_territorio).toLocaleString('pt-BR')} famílias</strong> não deram match (CEP ou endereço não batem com a base Geo). Você pode:
+                </p>
+                <ol className="list-decimal list-inside text-sm text-slate-600 space-y-1 mb-3">
+                  <li><strong>Corrigir na origem:</strong> no sistema de onde sai o CADU, ajustar CEP ou endereço (grafia, abreviação). Na próxima carga + &quot;Atualizar match Geo&quot;, entram no território.</li>
+                  <li><strong>Enriquecer a Geo:</strong> incluir na <code className="text-xs">tbl_geo</code> os endereços que faltam (CSV no mesmo formato, ou Via CEP no futuro). Depois &quot;Atualizar match Geo&quot;.</li>
+                  <li><strong>Revisar a lista:</strong> baixe o CSV abaixo, abra no Excel, identifique erros de digitação e corrija na origem ou adicione linhas na base Geo.</li>
+                </ol>
+                <button
+                  type="button"
+                  onClick={downloadSemTerritorio}
+                  disabled={matchStatsLoading}
+                  className="btn-primary text-sm disabled:opacity-50"
+                >
+                  Exportar lista sem território (CSV)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
