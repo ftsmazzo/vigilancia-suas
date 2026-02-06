@@ -435,9 +435,9 @@ export default function GeolocalizacaoPage() {
       </section>
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-2">Enriquecer com Via CEP</h2>
+        <h2 className="font-medium text-slate-800 mb-2">Incluir na Geo os CEPs que o CADU tem e a Geo não tem</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Busca na API Via CEP os endereços oficiais dos <strong>CEPs das famílias sem território</strong> e insere na <strong>tbl_geo</strong>. Depois você executa &quot;Atualizar match Geo&quot; e mais famílias passam a ter território (match CEP + logradouro). Rate limit ~1 req/s; cada execução processa até 200 CEPs. A tabela <code className="text-xs">tbl_via_cep_cache</code> evita repetir consultas.
+          Lista os <strong>CEPs distintos do CADU que ainda não estão na tbl_geo</strong>, consulta Via CEP (linha a linha, ~1 req/s) e insere o resultado na Geo. Lat/long, CRAS e CREAS ficam em branco (Via CEP não retorna; você pode preencher depois). Pode rodar várias vezes: a cada vez processa até 200 CEPs que ainda faltam. Depois rode &quot;Atualizar match Geo&quot; para o match usar a Geo atualizada.
         </p>
         <button
           type="button"
@@ -445,7 +445,7 @@ export default function GeolocalizacaoPage() {
           disabled={viaCepLoading}
           className="btn-primary disabled:opacity-50"
         >
-          {viaCepLoading ? 'Enriquecendo… (pode levar alguns minutos)' : 'Enriquecer com Via CEP (até 200 CEPs)'}
+          {viaCepLoading ? 'Enriquecendo… (pode levar alguns minutos)' : 'Via CEP: incluir CEPs do CADU na Geo (até 200)'}
         </button>
       </section>
 

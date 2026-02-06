@@ -1,8 +1,10 @@
 /**
  * POST /api/admin/geo/via-cep-enrich
- * Enriquecer tbl_geo com endereços Via CEP para CEPs de famílias sem território.
- * Busca por CEP, insere logradouro/bairro na Geo; depois "Atualizar match Geo" encontra mais famílias.
- * Rate limit: ~1 req/s (Via CEP é gratuito mas limitado).
+ * Incluir na tbl_geo os CEPs que o CADU tem e a Geo ainda não tem.
+ * Lista: CEPs distintos do CADU que não existem em tbl_geo → Via CEP (linha a linha) → INSERT na Geo.
+ * lat/long, cras, creas ficam NULL (Via CEP não retorna; você pode preencher depois).
+ * Pode rodar quantas vezes quiser: a cada vez processa os que ainda faltam (até o limite).
+ * Rate limit: ~1 req/s.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -57,14 +59,14 @@ export async function POST(request: NextRequest) {
   try {
     await ensureCacheTable(client);
 
-    // CEPs de famílias sem território que ainda não estão na tbl_geo
+    // CEPs que o CADU tem e a Geo ainda não tem (só isso; não depende de match nem MVs)
     const { rows: cepsToFetch } = await client.query<{ cep_norm: string }>(`
       SELECT DISTINCT f.d_num_cep_logradouro_fam AS cep_norm
-      FROM mv_familias_limpa f
+      FROM vw_familias_limpa f
       WHERE f.d_num_cep_logradouro_fam IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM mv_familias_geo g WHERE g.d_cod_familiar_fam = f.d_cod_familiar_fam)
-        AND NOT EXISTS (SELECT 1 FROM mv_familias_geo_por_logradouro g2 WHERE g2.d_cod_familiar_fam = f.d_cod_familiar_fam)
-        AND NOT EXISTS (SELECT 1 FROM tbl_geo g0 WHERE g0.cep_norm = f.d_num_cep_logradouro_fam)
+        AND TRIM(f.d_num_cep_logradouro_fam) != ''
+        AND NOT EXISTS (SELECT 1 FROM tbl_geo g WHERE g.cep_norm = f.d_num_cep_logradouro_fam)
+      ORDER BY f.d_num_cep_logradouro_fam
       LIMIT $1
     `, [limit]);
 
@@ -121,21 +123,24 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (logradouro || bairro) {
-        const endereco = logradouro ?? '';
-        const bairroVal = bairro ?? null;
-        const cepFormatted = norm.length === 8 ? `${norm.slice(0, 5)}-${norm.slice(5)}` : norm;
-        await client.query(
-          `INSERT INTO tbl_geo (endereco, bairro, cep, cep_norm) VALUES ($1, $2, $3, $4)`,
-          [endereco, bairroVal, cepFormatted, norm]
-        );
-        insertedGeo++;
-      }
+      // Inclui na Geo mesmo que Via CEP não tenha retornado logradouro (fica vazio; lat/cras/creas NULL)
+      const endereco = logradouro ?? '';
+      const bairroVal = bairro ?? null;
+      const cepFormatted = norm.length === 8 ? `${norm.slice(0, 5)}-${norm.slice(5)}` : norm;
+      await client.query(
+        `INSERT INTO tbl_geo (endereco, bairro, cep, cep_norm) VALUES ($1, $2, $3, $4)`,
+        [endereco, bairroVal, cepFormatted, norm]
+      );
+      insertedGeo++;
     }
 
     return NextResponse.json({
       ok: true,
-      message: `Enriquecimento Via CEP: ${cepsToFetch.length} CEP(s) processados, ${fromCache} do cache, ${insertedGeo} inseridos na Geo. Execute "Atualizar match Geo" para aplicar.`,
+      message: insertedGeo > 0
+        ? `${insertedGeo} CEP(s) incluídos na Geo (${cepsToFetch.length} processados, ${fromCache} do cache). Rode "Atualizar match Geo" para aplicar.`
+        : cepsToFetch.length === 0
+          ? 'Nenhum CEP do CADU está faltando na Geo; todos já existem em tbl_geo.'
+          : `${cepsToFetch.length} CEP(s) processados; ${insertedGeo} inseridos (outros podem ter dado erro ou Via CEP não retornou endereço).`,
       processed: cepsToFetch.length,
       from_cache: fromCache,
       inserted_geo: insertedGeo,
