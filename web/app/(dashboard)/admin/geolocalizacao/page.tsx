@@ -34,6 +34,7 @@ export default function GeolocalizacaoPage() {
   } | null>(null);
   const [matchStatsLoading, setMatchStatsLoading] = useState(false);
   const [viaCepLoading, setViaCepLoading] = useState(false);
+  const [copyToGeoLoading, setCopyToGeoLoading] = useState(false);
   const [viaCepMsg, setViaCepMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
@@ -184,22 +185,36 @@ export default function GeolocalizacaoPage() {
     setViaCepMsg(null);
     setViaCepLoading(true);
     try {
-      const res = await fetch('/api/admin/geo/via-cep-enrich', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 200 }),
-      });
+      const res = await fetch('/api/admin/geo/via-cep-enrich', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setViaCepMsg({ type: 'err', text: data.error || 'Falha no enriquecimento.' });
+        setViaCepMsg({ type: 'err', text: data.error || 'Falha ao buscar Via CEP.' });
         return;
       }
       setViaCepMsg({ type: 'ok', text: data.message || 'Via CEP executado.' });
-      if (data.inserted_geo > 0) fetchMatchStats();
     } catch {
       setViaCepMsg({ type: 'err', text: 'Erro de conexão.' });
     } finally {
       setViaCepLoading(false);
+    }
+  }
+
+  async function runViaCepToGeo() {
+    setViaCepMsg(null);
+    setCopyToGeoLoading(true);
+    try {
+      const res = await fetch('/api/admin/geo/via-cep-to-geo', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setViaCepMsg({ type: 'err', text: data.error || 'Falha ao copiar para Geo.' });
+        return;
+      }
+      setViaCepMsg({ type: 'ok', text: data.message || 'Copiado para Geo.' });
+      if (data.inserted_geo > 0) fetchMatchStats();
+    } catch {
+      setViaCepMsg({ type: 'err', text: 'Erro de conexão.' });
+    } finally {
+      setCopyToGeoLoading(false);
     }
   }
 
@@ -435,18 +450,31 @@ export default function GeolocalizacaoPage() {
       </section>
 
       <section className="card p-6">
-        <h2 className="font-medium text-slate-800 mb-2">Incluir na Geo os CEPs que o CADU tem e a Geo não tem</h2>
+        <h2 className="font-medium text-slate-800 mb-2">Via CEP em dois passos (tabela intermediária)</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Lista os <strong>CEPs distintos do CADU que ainda não estão na tbl_geo</strong>, consulta Via CEP (linha a linha, ~1 req/s) e insere o resultado na Geo. Lat/long, CRAS e CREAS ficam em branco (Via CEP não retorna; você pode preencher depois). Pode rodar várias vezes: a cada vez processa até 200 CEPs que ainda faltam. Depois rode &quot;Atualizar match Geo&quot; para o match usar a Geo atualizada.
+          CEPs que <strong>não têm território</strong> (vw_familias_territorio WHERE cep_territorio IS NULL): buscamos no Via CEP e gravamos na tabela intermediária <strong>tbl_via_cep</strong>. Depois copiamos dela para a <strong>tbl_geo</strong>. Assim você controla o que entra na Geo. Lat/long, CRAS e CREAS ficam NULL (preencher depois se quiser).
         </p>
-        <button
-          type="button"
-          onClick={runViaCepEnrich}
-          disabled={viaCepLoading}
-          className="btn-primary disabled:opacity-50"
-        >
-          {viaCepLoading ? 'Enriquecendo… (pode levar alguns minutos)' : 'Via CEP: incluir CEPs do CADU na Geo (até 200)'}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={runViaCepEnrich}
+            disabled={viaCepLoading || copyToGeoLoading}
+            className="btn-primary disabled:opacity-50"
+          >
+            {viaCepLoading ? 'Buscando… (~1 CEP/s)' : '1. Buscar 100 CEPs (sem território) no Via CEP → tbl_via_cep'}
+          </button>
+          <button
+            type="button"
+            onClick={runViaCepToGeo}
+            disabled={copyToGeoLoading || viaCepLoading}
+            className="btn-primary disabled:opacity-50"
+          >
+            {copyToGeoLoading ? 'Copiando…' : '2. Copiar tbl_via_cep → tbl_geo'}
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Rode o passo 1 várias vezes até acabar os CEPs pendentes; depois o passo 2 e em seguida &quot;Atualizar match Geo&quot;.
+        </p>
       </section>
 
       <section className="card p-6">
