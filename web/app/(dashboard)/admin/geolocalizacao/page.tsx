@@ -33,6 +33,8 @@ export default function GeolocalizacaoPage() {
     error?: string;
   } | null>(null);
   const [matchStatsLoading, setMatchStatsLoading] = useState(false);
+  const [viaCepLoading, setViaCepLoading] = useState(false);
+  const [viaCepMsg, setViaCepMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -178,6 +180,29 @@ export default function GeolocalizacaoPage() {
     }
   }
 
+  async function runViaCepEnrich() {
+    setViaCepMsg(null);
+    setViaCepLoading(true);
+    try {
+      const res = await fetch('/api/admin/geo/via-cep-enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 200 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setViaCepMsg({ type: 'err', text: data.error || 'Falha no enriquecimento.' });
+        return;
+      }
+      setViaCepMsg({ type: 'ok', text: data.message || 'Via CEP executado.' });
+      if (data.inserted_geo > 0) fetchMatchStats();
+    } catch {
+      setViaCepMsg({ type: 'err', text: 'Erro de conexão.' });
+    } finally {
+      setViaCepLoading(false);
+    }
+  }
+
   async function runCreateMv() {
     setCreateMvMsg(null);
     setCreateMvLoading(true);
@@ -231,13 +256,13 @@ export default function GeolocalizacaoPage() {
         </p>
       </div>
 
-      {(uploadMsg || refreshMsg || createMvMsg) && (
+      {(uploadMsg || refreshMsg || createMvMsg || viaCepMsg) && (
         <div
           className={`rounded-lg px-4 py-3 text-sm ${
-            (uploadMsg ?? refreshMsg ?? createMvMsg)?.type === 'ok' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+            (uploadMsg ?? refreshMsg ?? createMvMsg ?? viaCepMsg)?.type === 'ok' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
           }`}
         >
-          {(uploadMsg ?? refreshMsg ?? createMvMsg)?.text}
+          {(uploadMsg ?? refreshMsg ?? createMvMsg ?? viaCepMsg)?.text}
         </div>
       )}
 
@@ -409,10 +434,25 @@ export default function GeolocalizacaoPage() {
         </p>
       </section>
 
-      <section className="card p-6 border-slate-200 opacity-90">
-        <h2 className="font-medium text-slate-700 mb-2">Via CEP — enriquecer a Geo (em breve)</h2>
-        <p className="text-sm text-slate-500">
-          Objetivo: incluir na <strong>tbl_geo</strong> endereços que existem no CADU e ainda não estão na Geo (locais novos, base Geo de 2023). Via CEP em lote para buscar dados e INSERT na Geo; depois refresh da mv_familias_geo agrega mais famílias.
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Enriquecer com Via CEP</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Busca na API Via CEP os endereços oficiais dos <strong>CEPs das famílias sem território</strong> e insere na <strong>tbl_geo</strong>. Depois você executa &quot;Atualizar match Geo&quot; e mais famílias passam a ter território (match CEP + logradouro). Rate limit ~1 req/s; cada execução processa até 200 CEPs. A tabela <code className="text-xs">tbl_via_cep_cache</code> evita repetir consultas.
+        </p>
+        <button
+          type="button"
+          onClick={runViaCepEnrich}
+          disabled={viaCepLoading}
+          className="btn-primary disabled:opacity-50"
+        >
+          {viaCepLoading ? 'Enriquecendo… (pode levar alguns minutos)' : 'Enriquecer com Via CEP (até 200 CEPs)'}
+        </button>
+      </section>
+
+      <section className="card p-6">
+        <h2 className="font-medium text-slate-800 mb-2">Match por similaridade (ortografia)</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Para tolerar <strong>erros de grafia</strong> (ex.: Braisl vs Brasil), rode uma vez no PGAdmin o script <strong>create_geo_match_fuzzy.sql</strong>. Ele cria a extensão <code className="text-xs">pg_trgm</code> e a MV <code className="text-xs">mv_familias_geo_fuzzy</code> (match por similaridade de texto). A view <code className="text-xs">vw_familias_territorio</code> passa a usar três níveis: exato, só logradouro e fuzzy. Depois disso, &quot;Atualizar match Geo&quot; também atualiza a MV fuzzy. Se o servidor não permitir <code className="text-xs">CREATE EXTENSION</code>, peça ao DBA para instalar <code className="text-xs">pg_trgm</code>.
         </p>
       </section>
     </div>
