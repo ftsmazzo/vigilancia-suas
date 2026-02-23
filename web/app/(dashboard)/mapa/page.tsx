@@ -34,8 +34,8 @@ export default function MapaPage() {
   useEffect(() => {
     setLoading(true);
     const url = bairroSelecionado
-      ? `/api/data/ceps-mapa?limite=3000&bairro=${encodeURIComponent(bairroSelecionado)}`
-      : '/api/data/ceps-mapa?limite=3000';
+      ? `/api/data/ceps-mapa?limite=250&bairro=${encodeURIComponent(bairroSelecionado)}`
+      : '/api/data/ceps-mapa?limite=250';
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
@@ -59,7 +59,7 @@ export default function MapaPage() {
       <div>
         <h1 className="text-xl font-semibold text-slate-800">Mapa por CEP</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Pontos da base tbl_ceps — um marcador por CEP. Filtre por bairro e clique no pin para ver endereço.
+          Georreferência por CEP (AwesomeAPI): um marcador por CEP da tbl_ceps. Filtre por bairro; clique no pin para ver endereço.
         </p>
       </div>
 
