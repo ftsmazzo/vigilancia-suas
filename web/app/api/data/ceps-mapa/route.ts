@@ -17,27 +17,30 @@ export async function GET(request: Request) {
   const limite = Math.min(Math.max(Number(searchParams.get('limite')) || 3000, 1), 10000);
   const bairro = searchParams.get('bairro')?.trim() || null;
 
-  // tbl_ceps: cep, endereco, bairro; assumindo lat_num, long_num (como tbl_geo)
+  // tbl_ceps: cep, endereco, bairro, lat_char, long_char (texto → cast para número)
   const sql = `
     SELECT
       sub.cep,
       sub.endereco,
       sub.bairro,
-      sub.lat_num AS lat,
-      sub.long_num AS lng
+      sub.lat,
+      sub.lng
     FROM (
       SELECT DISTINCT ON (cep)
         cep,
         endereco,
         bairro,
-        lat_num,
-        long_num
+        CASE WHEN NULLIF(TRIM(lat_char), '') ~ '^-?[\\d.]+$' THEN TRIM(lat_char)::DOUBLE PRECISION ELSE NULL END AS lat,
+        CASE WHEN NULLIF(TRIM(long_char), '') ~ '^-?[\\d.]+$' THEN TRIM(long_char)::DOUBLE PRECISION ELSE NULL END AS lng
       FROM tbl_ceps
-      WHERE lat_num IS NOT NULL AND long_num IS NOT NULL
+      WHERE lat_char IS NOT NULL AND long_char IS NOT NULL
+        AND TRIM(COALESCE(lat_char, '')) != '' AND TRIM(COALESCE(long_char, '')) != ''
+        AND TRIM(lat_char) ~ '^-?[\\d.]+$' AND TRIM(long_char) ~ '^-?[\\d.]+$'
       ${bairro ? 'AND TRIM(COALESCE(bairro, \'\')) = $2' : ''}
       ORDER BY cep, endereco
     ) sub
-    ORDER BY cep
+    WHERE sub.lat IS NOT NULL AND sub.lng IS NOT NULL
+    ORDER BY sub.cep
     LIMIT $1
   `;
 
@@ -68,7 +71,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         pontos: [],
         total: 0,
-        error: 'Tabela tbl_ceps não existe ou não tem colunas lat_num/long_num. Crie tbl_ceps ou use uma view com essas colunas.',
+        error: 'Tabela tbl_ceps não existe.',
       });
     }
     console.error('ceps-mapa', e);
