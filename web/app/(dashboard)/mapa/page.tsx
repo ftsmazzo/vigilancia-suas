@@ -34,8 +34,8 @@ export default function MapaPage() {
   useEffect(() => {
     setLoading(true);
     const url = bairroSelecionado
-      ? `/api/data/ceps-mapa?limite=250&bairro=${encodeURIComponent(bairroSelecionado)}`
-      : '/api/data/ceps-mapa?limite=250';
+      ? `/api/data/ceps-mapa?limite=3000&bairro=${encodeURIComponent(bairroSelecionado)}`
+      : '/api/data/ceps-mapa?limite=3000';
     fetch(url)
       .then((r) => r.json())
       .then((data) => {
@@ -59,7 +59,7 @@ export default function MapaPage() {
       <div>
         <h1 className="text-xl font-semibold text-slate-800">Mapa por CEP</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Georreferência por CEP (AwesomeAPI): um marcador por CEP da tbl_ceps. Filtre por bairro; clique no pin para ver endereço.
+          Um marcador por CEP da tbl_ceps (lat/long do banco). Filtre por bairro; clique no pin para ver endereço. Exporte os pontos exibidos em CSV.
         </p>
       </div>
 
@@ -86,6 +86,30 @@ export default function MapaPage() {
             Filtrando por: <strong>{bairroSelecionado}</strong>
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => {
+            const header = 'endereco;bairro;cep;lat;lng';
+            const escape = (v: string | number) => {
+              const s = String(v);
+              return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const rows = pontos.map((p) =>
+              [p.endereco, p.bairro, p.cep, p.lat, p.lng].map((v) => escape(v)).join(';')
+            );
+            const csv = [header, ...rows].join('\r\n');
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = bairroSelecionado ? `ceps_${bairroSelecionado.replace(/\s+/g, '_')}.csv` : 'ceps_mapa.csv';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}
+          disabled={pontos.length === 0}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Exportar CSV (endereço, bairro, CEP, lat, long)
+        </button>
       </div>
 
       {error && (

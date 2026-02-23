@@ -2,40 +2,10 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { query } from '@/lib/db';
 
-const AWESOME_API = 'https://cep.awesomeapi.com.br/json';
-const MAX_CEPS = 250;
-const BATCH_SIZE = 5;
-const DELAY_MS = 180;
-
-function cepSoNumeros(cep: string | null): string {
-  if (!cep) return '';
-  return cep.replace(/\D/g, '').slice(0, 8);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-/** Busca lat/lng na AwesomeAPI por CEP (georreferência por CEP, não pelo banco). */
-async function geocodeCep(cep8: string): Promise<{ lat: number; lng: number } | null> {
-  if (cep8.length < 8) return null;
-  try {
-    const res = await fetch(`${AWESOME_API}/${cep8}`, { method: 'GET', signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { lat?: string; lng?: string };
-    const lat = data?.lat != null ? Number(data.lat) : NaN;
-    const lng = data?.lng != null ? Number(data.lng) : NaN;
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * GET /api/data/ceps-mapa
- * Pontos para o mapa: um por CEP da tbl_ceps. Coordenadas vêm da AwesomeAPI (georreferência por CEP).
- * Query params: limite (default 500, máx 250), bairro (opcional).
+ * Pontos para o mapa: um por CEP da tbl_ceps (lat/long do banco: lat_char, long_char).
+ * Query params: limite (default 3000), bairro (opcional).
  */
 export async function GET(request: Request) {
   const user = await getSession();
@@ -44,60 +14,65 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const limite = Math.min(Math.max(Number(searchParams.get('limite')) || 500, 1), MAX_CEPS);
+  const limite = Math.min(Math.max(Number(searchParams.get('limite')) || 3000, 1), 10000);
   const bairro = searchParams.get('bairro')?.trim() || null;
 
   const sql = `
-    SELECT DISTINCT ON (NULLIF(TRIM(cep), ''))
-      cep,
-      endereco,
-      bairro
-    FROM tbl_ceps
-    WHERE cep IS NOT NULL AND TRIM(cep) != ''
-    ${bairro ? 'AND TRIM(COALESCE(bairro, \'\')) = $2' : ''}
-    ORDER BY NULLIF(TRIM(cep), ''), id
+    SELECT
+      sub.cep,
+      sub.endereco,
+      sub.bairro,
+      sub.lat,
+      sub.lng
+    FROM (
+      SELECT DISTINCT ON (cep)
+        cep,
+        endereco,
+        bairro,
+        CASE WHEN NULLIF(TRIM(lat_char), '') ~ '^-?[\\d.]+$' THEN TRIM(lat_char)::DOUBLE PRECISION ELSE NULL END AS lat,
+        CASE WHEN NULLIF(TRIM(long_char), '') ~ '^-?[\\d.]+$' THEN TRIM(long_char)::DOUBLE PRECISION ELSE NULL END AS lng
+      FROM tbl_ceps
+      WHERE lat_char IS NOT NULL AND long_char IS NOT NULL
+        AND TRIM(COALESCE(lat_char, '')) != '' AND TRIM(COALESCE(long_char, '')) != ''
+        AND TRIM(lat_char) ~ '^-?[\\d.]+$' AND TRIM(long_char) ~ '^-?[\\d.]+$'
+      ${bairro ? 'AND TRIM(COALESCE(bairro, \'\')) = $2' : ''}
+      ORDER BY cep, endereco
+    ) sub
+    WHERE sub.lat IS NOT NULL AND sub.lng IS NOT NULL
+    ORDER BY sub.cep
     LIMIT $1
   `;
   const params = bairro ? [limite, bairro] : [limite];
 
-  let rows: { cep: string | null; endereco: string | null; bairro: string | null }[];
   try {
-    const result = await query<{ cep: string | null; endereco: string | null; bairro: string | null }>(sql, params);
-    rows = result.rows;
+    const { rows } = await query<{
+      cep: string | null;
+      endereco: string | null;
+      bairro: string | null;
+      lat: number;
+      lng: number;
+    }>(sql, params);
+
+    return NextResponse.json({
+      pontos: rows.map((r) => ({
+        cep: r.cep ?? '',
+        endereco: r.endereco ?? '',
+        bairro: r.bairro ?? '',
+        lat: Number(r.lat),
+        lng: Number(r.lng),
+      })),
+      total: rows.length,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes('does not exist') || msg.includes('não existe')) {
-      return NextResponse.json({ pontos: [], total: 0, error: 'Tabela tbl_ceps não existe.' });
+      return NextResponse.json({
+        pontos: [],
+        total: 0,
+        error: 'Tabela tbl_ceps não existe.',
+      });
     }
     console.error('ceps-mapa', e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-
-  const pontos: { cep: string; endereco: string; bairro: string; lat: number; lng: number }[] = [];
-  const seen = new Set<string>();
-
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (r) => {
-      const cep8 = cepSoNumeros(r.cep);
-      if (cep8.length < 8 || seen.has(cep8)) return null;
-      seen.add(cep8);
-      const coords = await geocodeCep(cep8);
-      if (!coords) return null;
-      return {
-        cep: (r.cep ?? '').trim() || cep8,
-        endereco: (r.endereco ?? '').trim(),
-        bairro: (r.bairro ?? '').trim(),
-        lat: coords.lat,
-        lng: coords.lng,
-      };
-    });
-    const results = await Promise.all(promises);
-    for (const p of results) {
-      if (p) pontos.push(p);
-    }
-    if (i + BATCH_SIZE < rows.length) await sleep(DELAY_MS);
-  }
-
-  return NextResponse.json({ pontos, total: pontos.length });
 }
