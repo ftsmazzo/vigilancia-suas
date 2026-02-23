@@ -12,6 +12,7 @@ interface AppShellProps {
 const nav = [
   { href: '/', label: 'Início' },
   { href: '/numerico', label: 'Dashboard Numérico' },
+  { href: '/mapa', label: 'Mapa (CEPs)' },
   { href: '/consulta', label: 'Agenda Forms' },
   { href: '/admin', label: 'Manutenção', adminOnly: true },
   { href: '/admin/geolocalizacao', label: 'Geolocalização', adminOnly: true },
