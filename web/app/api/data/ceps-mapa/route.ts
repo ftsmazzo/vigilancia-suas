@@ -4,9 +4,8 @@ import { query } from '@/lib/db';
 
 /**
  * GET /api/data/ceps-mapa
- * Pontos para o mapa: um por CEP, a partir da base de endereços (tbl_geo).
- * Georreferência por CEP: cada CEP aparece uma vez com lat/long.
- * Query params: limite (default 3000).
+ * Pontos para o mapa: um por CEP, a partir da base tbl_ceps.
+ * Query params: limite (default 3000), bairro (opcional, filtra por bairro).
  */
 export async function GET(request: Request) {
   const user = await getSession();
@@ -16,29 +15,33 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const limite = Math.min(Math.max(Number(searchParams.get('limite')) || 3000, 1), 10000);
+  const bairro = searchParams.get('bairro')?.trim() || null;
 
+  // tbl_ceps: cep, endereco, bairro; assumindo lat_num, long_num (como tbl_geo)
   const sql = `
     SELECT
-      cep,
-      endereco,
-      bairro,
-      lat_num AS lat,
-      long_num AS lng
+      sub.cep,
+      sub.endereco,
+      sub.bairro,
+      sub.lat_num AS lat,
+      sub.long_num AS lng
     FROM (
-      SELECT DISTINCT ON (COALESCE(cep_norm, cep))
+      SELECT DISTINCT ON (cep)
         cep,
         endereco,
         bairro,
         lat_num,
-        long_num,
-        cep_norm
-      FROM tbl_geo
+        long_num
+      FROM tbl_ceps
       WHERE lat_num IS NOT NULL AND long_num IS NOT NULL
-      ORDER BY COALESCE(cep_norm, cep), id
+      ${bairro ? 'AND TRIM(COALESCE(bairro, \'\')) = $2' : ''}
+      ORDER BY cep, endereco
     ) sub
     ORDER BY cep
     LIMIT $1
   `;
+
+  const params = bairro ? [limite, bairro] : [limite];
 
   try {
     const { rows } = await query<{
@@ -47,7 +50,7 @@ export async function GET(request: Request) {
       bairro: string | null;
       lat: number;
       lng: number;
-    }>(sql, [limite]);
+    }>(sql, params);
 
     return NextResponse.json({
       pontos: rows.map((r) => ({
@@ -65,7 +68,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         pontos: [],
         total: 0,
-        error: 'Tabela tbl_geo não existe. Faça o upload da base Geo primeiro.',
+        error: 'Tabela tbl_ceps não existe ou não tem colunas lat_num/long_num. Crie tbl_ceps ou use uma view com essas colunas.',
       });
     }
     console.error('ceps-mapa', e);
