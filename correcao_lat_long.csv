@@ -1,0 +1,101 @@
+﻿endereco;bairro;cep;lat;lng
+Rua Professor Antônio Baracchini;Jardim São Luiz;14020390;-21.1704008;-47.8103238
+Rua João Castellucci;City Ribeirão;14020391;;
+Rua Orlando Palocci;City Ribeirão;14020392;-21.2185660;-47.7846902
+Praça Comendador Manuel dos Santos Freire;Vila Virgínia;14020393;;
+Travessa Inhomirim;Vila Virgínia;14020394;;
+Praça João Batista Ferreira;Jardim Piratininga;14020395;;
+Rua Ronald de Carvalho;Jardim Bela Vista;14020396;;
+Rua Jan Janowski;Jardim Marchesi;14020397;;
+Rua Deolinda Zunfrilli;Núcleo Vida Nova;14020398;-21.2762342;-47.8134096
+Rua João Thomazo;Jardim Marchesi;14020399;-21.1957127;-47.799768
+Rua Nadin Latuf;Jardim Dona Branca Salles;14020400;-21.1950465;-47.802517
+Rua Edith Augusto Rezende;Jardim Dona Branca Salles;14020401;;
+Avenida Frei Tito de Alencar Lima;Jardim Dona Branca Salles;14020402;;
+Rua Gilberto Spagnol;Jardim Dona Branca Salles;14020403;;
+Avenida Maestro Antônio Giammarusti;Jardim Itaú;14020404;-21.1783949;-47.8642532
+Rua Virgínia Biagi Luchiari;Jardim Itaú;14020405;;
+Travessa João Mazzei;Ipiranga;14020406;-21.1572759;-47.8142518
+Rua Aurora Maria Caravello Lopes;Planalto Verde;14020407;-21.1483595;-47.8331802
+Rua Ministro Gustavo Capanema de Almeida;Planalto Verde;14020408;-21.2005037;-47.8056733
+Rua Waldyr Castaldelli;Planalto Verde;14020409;-21.1704008;-47.8103238
+Rua Philomena Zunfrili Castellucci;Portal do Alto;14020410;-21.1963738;-47.8040856
+Rua Jacinto Giubelini;Jardim Doutor Paulo Gomes Romeo;14020411;;
+Rua Beth Lima;Jardim Paiva;14020412;-21.1521220;-47.8505079
+Rua Francisco Ferriolli;Jardim Paiva;14020413;;
+Rua Walter Ziliotto;Jardim Paiva;14020414;-21.1549746;-47.8471198
+Rua Dona Yolanda Baptista Orsi;Jardim Paiva;14020415;-21.1553004;-47.8493131
+Rua Cláudio Protti;Parque das Andorinhas;14020416;;
+Rua Euclydes Augusto Carneiro;Jardim Jovino Campos;14020417;;
+Rua Wadyh William Cury;Dom Bernardo José Mielle;14020418;;
+Rua Professor Doutor André Ricciardi Cruz;Jardim Eugênio Mendes Lopes;14020419;;
+Rua Diego de Carvalho;Residencial Doutor Rubem Cione;14020420;-21.1959836;-47.8013401
+Rua Armando Greggi;Conjunto Habitacional Sílvio Passalacqua;14020421;;
+Rua Francisco Fernandes Lamas;Conjunto Habitacional Sílvio Passalacqua;14020422;;
+Rua Alcides Millan;Conjunto Habitacional Sílvio Passalacqua;14020423;;
+Rua Armando de Oliveira Vallada;Antônio Marincek;14020424;;
+Rua Nathanael Emerich;Antônio Marincek;14020425;;
+Rua Antônio Rossanese;Chácaras Bonacorsi;14020426;;
+Rua Mansueto Bonaccorsi;Valentina Figueiredo;14020427;;
+Rua Professor Takashi Shimo;Jardim Heitor Rigon;14020428;-21.1215628;-47.8157416
+Rua Rosalina da Cunha Fontanezi;Jardim Heitor Rigon;14020429;-21.1180129;-47.8143620
+Rua Marcelo Rodrigues Agostinho;Jardim Heitor Rigon;14020430;-21.1967837;-47.8017158
+Rua Carolina Veronezi Mingarino;Jardim Heitor Rigon;14020431;;
+Rua Adylio Mosca;Jardim Heitor Rigon;14020432;-21.1147537;-47.8138966
+Rua Antônia Quaresma da Silveira Minto;Jardim Heitor Rigon;14020433;-21.1153404;-47.8183427
+Avenida Esthevão Nomelini;Parque dos Pinus;14020434;;
+Rua Renato Bulgarelli;Parque dos Pinus;14020435;;
+Rua Luiza Maria Tognon Perticarrari;Parque dos Pinus;14020436;;
+Rua Dona Maria Giubelini Scandiuzzi;Jardim Maria de Lourdes;14020437;;
+Rua Professor Takashi Shimo;Jardim Maria de Lourdes;14020438;;
+Rua Professora Irma Cury Ribeiro da Silva;Jardim Maria de Lourdes;14020439;;
+Rua João Mattaraia;Jardim Joaquim Procópio de Araújo Ferraz;14020440;-21.1975764;-47.802084
+Rua Professor Antônio Robazzi;Jardim Joaquim Procópio de Araújo Ferraz;14020441;;
+Rua Coronel Chead Abdalla;Jardim Joaquim Procópio de Araújo Ferraz;14020442;;
+Rua Benedicto Thomaz Terreri;Parque das Figueiras;14020443;-21.1967186;-47.8001608
+Rua Alfredo Tiezzi;Parque das Figueiras;14020444;;
+Avenida Arsênio Sacilotto;Parque das Oliveiras;14020445;-21.1195342;-47.8376422
+Rua Manoel Navarro;Parque das Oliveiras;14020446;-21.1208722;-47.8396453
+Rua Dorival Falconi;Parque das Oliveiras;14020447;-21.1203041;-47.8385046
+Rua Adelaide Sumarelli dos Santos;Parque das Oliveiras;14020448;-21.1185792;-47.8363827
+Rua Benedita Melo da Silva;Parque das Oliveiras;14020449;-21.1164229;-47.8350744
+Rua Luiz Fabiano Anholetto;Parque das Oliveiras;14020450;-21.1981296;-47.8018399
+Rua Renato Camperoni;Parque das Oliveiras;14020451;-21.1161542;-47.8343568
+Rua Maria Ribeiro Miotto;Parque das Oliveiras;14020452;;
+Rua João Tapetti;Jardim Alexandre Balbo;14020453;-21.190049;-47.8016952
+Rua Hugo Carletti;Jardim Alexandre Balbo;14020454;-21.1279424;-47.8306015
+Rua Dozolina Mafalda Bertocco Reis;Jardim Orestes Lopes de Camargo;14020455;;
+Rua Doutor Dante Jemma;Quintino Facci II;14020456;;
+Rua Osmar Vecchi;Quintino Facci II;14020457;;
+Rua João Gagliardi;Quintino Facci II;14020458;;
+Rua Ignês Mantovani Giachetto;Quintino Facci II;14020459;-21.1625635;-47.8114555
+Rua Francisco Bassotelli;Quintino Facci II;14020460;-21.1985907;-47.8040772
+Rua Vereador Romero Barbosa;Avelino Alves Palma;14020461;-21.1704008;-47.8103238
+Rua Maria Aparecida de Souza Diniz Guimarães;Condomínio Balneário Recreativa;14020462;-21.1007860;-47.7850156
+Estrada Doutor Oswaldo Ruiz;Chácaras Pedro Corrêa de Carvalho;14020463;;
+Estrada Vereador Antônio Joaquim da Silva;Chácaras Pedro Corrêa de Carvalho;14020464;;
+Estrada Vicente Canuto;Chácaras Pedro Corrêa de Carvalho;14020465;;
+Estrada Vereador João Francisco de Oliveira;Chácaras Pedro Corrêa de Carvalho;14020466;;
+Rua Luiz Roberto Mesquita Leão;Independência;14020467;;
+Rua Doutor Horácio Montenegro;Independência;14020468;;
+Rua Antônio Mazzafelli;Quintino Facci I;14020469;-21.1993152;-47.8035457
+Rua Humberto Felloni;Parque Industrial Avelino Alves Palma;14020470;-21.1996132;-47.8061227
+Rua Maria Luiza da Silva Prado Ramos;Parque Industrial Avelino Alves Palma;14020471;;
+Rua Londrina;Jardim Salgado Filho;14020472;;
+Rua Adilson Bignardi;Jardim Patriarca;14020473;;
+Rua Major-Brigadeiro-do-Ar Josino Maia de Assis;Cidade Jardim;14020474;;
+Rua Genny Arantes Vianna Cione;Residencial Léo Gomes de Moraes;14020475;;
+Rua Henrique Santillo;Jardim Professor Antônio Palocci;14020476;;
+Rua Emílio José Campos;Jardim Professor Antônio Palocci;14020477;;
+Rua Olinda Ribeiro Waldemar;Jardim Professor Antônio Palocci;14020478;;
+Rua Angelino Vendrúsculo;Jardim Professor Antônio Palocci;14020479;;
+Rua Pedro Matiuzzo;Jardim Professor Antônio Palocci;14020480;-21.1999225;-47.8036548
+Rua Ademir Spagnol Miluzzi;Jardim Diva Tarlá de Carvalho;14020481;;
+Rua Paulo Cesar Rodrigues;Jardim Vilico Cantarelli;14020482;;
+Rua Breno Nogueira;Jardim Vilico Cantarelli;14020483;;
+Rua Daudt José da Costa;Jardim Pedra Branca;14020484;;
+Rua Senador Darcy Ribeiro;Jardim Porto Seguro;14020485;;
+Rua Selma Marina Barrela dos Santos;Jardim Ouro Branco;14020486;;
+Travessa Vanderci Mattiusso;Jardim Paulistano;14020487;;
+Rua Jair Grellet;Jardim Castelo Branco;14020488;;
+Rua Ângelo Parmigiani;Iguatemi;14020489;-21.2012701;-47.8074874
