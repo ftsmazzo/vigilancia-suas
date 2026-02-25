@@ -1,0 +1,23 @@
+-- Atualiza tbl_ceps (lat_char, long_char) por CEP e endereço – lote 2.
+
+UPDATE public.tbl_ceps SET lat_char = '-21.162953', long_char = '-47.728861' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062001' AND TRIM(COALESCE(endereco, '')) = 'Rua José Margato';
+UPDATE public.tbl_ceps SET lat_char = '-21.154566', long_char = '-47.842181' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062002' AND TRIM(COALESCE(endereco, '')) = 'Rua Francisco Ferriolli';
+UPDATE public.tbl_ceps SET lat_char = '-21.168162', long_char = '-47.728837' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062003' AND TRIM(COALESCE(endereco, '')) = 'Rua Leonor Pennachiotti Gallo';
+UPDATE public.tbl_ceps SET lat_char = '-21.108242', long_char = '-47.792974' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062004' AND TRIM(COALESCE(endereco, '')) = 'Rua Ignês Mantovani Giachetto';
+UPDATE public.tbl_ceps SET lat_char = '-21.141334', long_char = '-47.853178' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062005' AND TRIM(COALESCE(endereco, '')) = 'Rua Philomena Zunfrili Castelucci';
+UPDATE public.tbl_ceps SET lat_char = '-21.118370', long_char = '-47.810099' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062006' AND TRIM(COALESCE(endereco, '')) = 'Rua Carlos Marighella';
+UPDATE public.tbl_ceps SET lat_char = '-21.218584', long_char = '-47.784708' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062007' AND TRIM(COALESCE(endereco, '')) = 'Rua Armando Sicci';
+UPDATE public.tbl_ceps SET lat_char = '-21.118035', long_char = '-47.814639' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062008' AND TRIM(COALESCE(endereco, '')) = 'Rua Adilson Bignardi';
+UPDATE public.tbl_ceps SET lat_char = '-21.166477', long_char = '-47.746077' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062009' AND TRIM(COALESCE(endereco, '')) = 'Rua Mansueto Bonaccorsi';
+UPDATE public.tbl_ceps SET lat_char = '-21.110488', long_char = '-47.786520' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062010' AND TRIM(COALESCE(endereco, '')) = 'Rua Orlando Palocci';
+UPDATE public.tbl_ceps SET lat_char = '-21.182267', long_char = '-47.866511' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062011' AND TRIM(COALESCE(endereco, '')) = 'Rua Rosalina da Cunha Fontanezi';
+UPDATE public.tbl_ceps SET lat_char = '-21.202196', long_char = '-47.776550' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062012' AND TRIM(COALESCE(endereco, '')) = 'Rua Irene Capucci de Oliveira';
+UPDATE public.tbl_ceps SET lat_char = '-21.120808', long_char = '-47.816775' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062013' AND TRIM(COALESCE(endereco, '')) = 'Rua Vereador Romero Barbosa';
+UPDATE public.tbl_ceps SET lat_char = '-21.218242', long_char = '-47.781280' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062014' AND TRIM(COALESCE(endereco, '')) = 'Rua Virgínia Biagi Luchiari';
+UPDATE public.tbl_ceps SET lat_char = '-21.117860', long_char = '-47.795949' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062015' AND TRIM(COALESCE(endereco, '')) = 'Avenida Talita Regazzini Verçosa';
+UPDATE public.tbl_ceps SET lat_char = '-21.115110', long_char = '-47.811265' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062016' AND TRIM(COALESCE(endereco, '')) = 'Rua Professora Irma Cury Ribeiro da Silva';
+UPDATE public.tbl_ceps SET lat_char = '-21.162953', long_char = '-47.728861' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062017' AND TRIM(COALESCE(endereco, '')) = 'Rua João Castellucci';
+UPDATE public.tbl_ceps SET lat_char = '-21.127854', long_char = '-47.801210' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062018' AND TRIM(COALESCE(endereco, '')) = 'Estrada Vicente Canuto';
+UPDATE public.tbl_ceps SET lat_char = '-21.120330', long_char = '-47.838584' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062019' AND TRIM(COALESCE(endereco, '')) = 'Rua Dorival Falconi';
+UPDATE public.tbl_ceps SET lat_char = '-21.119191', long_char = '-47.818171' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062020' AND TRIM(COALESCE(endereco, '')) = 'Rua Elvira Amador Biasoli';
+UPDATE public.tbl_ceps SET lat_char = '-21.132591', long_char = '-47.851415' WHERE TRIM(REPLACE(REPLACE(COALESCE(cep, ''), '-', ''), ' ', '')) = '14062021' AND TRIM(COALESCE(endereco, '')) = 'Rua Euclydes Augusto Carneiro';
